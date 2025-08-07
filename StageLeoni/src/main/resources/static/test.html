@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Test</title>
+  </head>
+  <body>
+    <h1>Department Hierarchy API Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+
+    <script>
+      async function testAPI() {
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "Loading...";
+
+        try {
+          console.log("Making request to /api/admin/departments/hierarchy");
+          const response = await fetch("/api/admin/departments/hierarchy");
+          const data = await response.json();
+
+          console.log("Response data:", data);
+
+          if (data && data.companies && data.companies.length > 0) {
+            const company = data.companies[0];
+            let html = `<h3>Success!</h3>`;
+            html += `<p>Company: ${company.name}</p>`;
+            html += `<p>Locations: ${company.locations.length}</p>`;
+            html += `<ul>`;
+
+            company.locations.forEach((location) => {
+              html += `<li>${location.name} (${location.departments.length} departments)</li>`;
+            });
+
+            html += `</ul>`;
+            resultDiv.innerHTML = html;
+          } else {
+            resultDiv.innerHTML =
+              '<p style="color: red;">Failed to load department hierarchy: No companies found</p>';
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        }
+      }
+    </script>
+  </body>
+</html>

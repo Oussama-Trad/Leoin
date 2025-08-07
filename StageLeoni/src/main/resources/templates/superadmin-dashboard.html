@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperAdmin Dashboard - Leoni Admin Service</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+            color: #2c5aa0;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .stat-card .card-body {
+            padding: 2rem;
+        }
+        
+        .btn-superadmin {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-superadmin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            color: white;
+        }
+        
+        .news-form {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 2rem;
+        }
+        
+        .visibility-options {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #dee2e6;
+        }
+        
+        .filter-section {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+        
+        .filter-section.active {
+            display: block;
+        }
+        
+        .admin-card {
+            border-left: 4px solid #007bff;
+        }
+        
+        .employee-card {
+            border-left: 4px solid #28a745;
+        }
+        
+        .news-image-preview {
+            max-width: 200px;
+            max-height: 150px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#"><i class="fas fa-crown me-2"></i>SuperAdmin Dashboard</a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-user-shield me-1"></i>
+                    Bienvenue, <span id="superadmin-name">SuperAdmin</span>
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt me-1"></i>Déconnexion
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2">
+                <div class="list-group">
+                    <a href="#dashboard" class="list-group-item list-group-item-action active" onclick="showSection('dashboard')">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a href="#news" class="list-group-item list-group-item-action" onclick="showSection('news')">
+                        <i class="fas fa-newspaper me-2"></i>Créer News Ciblée
+                    </a>
+                    <a href="#admins" class="list-group-item list-group-item-action" onclick="showSection('admins')">
+                        <i class="fas fa-users-cog me-2"></i>Gérer Admins
+                    </a>
+                    <a href="#employees" class="list-group-item list-group-item-action" onclick="showSection('employees')">
+                        <i class="fas fa-users me-2"></i>Gérer Employés
+                    </a>
+                    <a href="#stats" class="list-group-item list-group-item-action" onclick="showSection('stats')">
+                        <i class="fas fa-chart-bar me-2"></i>Statistiques
+                    </a>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <!-- Dashboard Section -->
+                <div id="dashboard-section" class="section">
+                    <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard SuperAdmin</h2>
+                    <div class="row mt-4">
+                        <div class="col-md-3 mb-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-users-cog fa-2x mb-2"></i>
+                                    <h3 id="total-admins">-</h3>
+                                    <p>Total Admins</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-users fa-2x mb-2"></i>
+                                    <h3 id="total-employees">-</h3>
+                                    <p>Total Employés</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-newspaper fa-2x mb-2"></i>
+                                    <h3 id="total-news">-</h3>
+                                    <p>Total News</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                    <h3 id="active-admins">-</h3>
+                                    <p>Admins Actifs</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- News Creation Section -->
+                <div id="news-section" class="section" style="display: none;">
+                    <h2><i class="fas fa-newspaper me-2"></i>Créer News Ciblée</h2>
+                    <div class="news-form mt-4">
+                        <form id="targeted-news-form">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="news-title" class="form-label">Titre</label>
+                                        <input type="text" class="form-control" id="news-title" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="news-content" class="form-label">Contenu</label>
+                                        <textarea class="form-control" id="news-content" rows="5" required></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="news-image" class="form-label">Image (optionnel)</label>
+                                        <input type="file" class="form-control" id="news-image" accept="image/*">
+                                        <img id="image-preview" class="news-image-preview" style="display: none;">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="visibility-options">
+                                        <h5><i class="fas fa-eye me-2"></i>Ciblage</h5>
+                                        <div class="mb-3">
+                                            <input type="radio" class="form-check-input" id="target-all" name="targetAudience" value="all" checked>
+                                            <label class="form-check-label ms-2" for="target-all">
+                                                Tout le monde
+                                            </label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <input type="radio" class="form-check-input" id="target-department" name="targetAudience" value="department">
+                                            <label class="form-check-label ms-2" for="target-department">
+                                                Par département
+                                            </label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <input type="radio" class="form-check-input" id="target-location" name="targetAudience" value="location">
+                                            <label class="form-check-label ms-2" for="target-location">
+                                                Par localisation
+                                            </label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <input type="radio" class="form-check-input" id="target-both" name="targetAudience" value="both">
+                                            <label class="form-check-label ms-2" for="target-both">
+                                                Département + Localisation
+                                            </label>
+                                        </div>
+                                        
+                                        <!-- Filter Sections -->
+                                        <div id="department-filter" class="filter-section">
+                                            <label class="form-label">Sélectionner départements:</label>
+                                            <select class="form-select" multiple id="department-select">
+                                                <option value="IT">IT</option>
+                                                <option value="HR">RH</option>
+                                                <option value="Finance">Finance</option>
+                                                <option value="Marketing">Marketing</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div id="location-filter" class="filter-section">
+                                            <label class="form-label">Sélectionner localisations:</label>
+                                            <select class="form-select" multiple id="location-select">
+                                                <option value="Morocco">Maroc</option>
+                                <option value="Tunisia">Tunisie</option>
+                                <option value="Romania">Roumanie</option>
+                                <option value="Ukraine">Ukraine</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-superadmin btn-lg">
+                                    <i class="fas fa-paper-plane me-2"></i>Publier News Ciblée
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Admins Management Section -->
+                <div id="admins-section" class="section" style="display: none;">
+                    <h2><i class="fas fa-users-cog me-2"></i>Gestion des Admins</h2>
+                    <div class="row mt-4" id="admins-list">
+                        <!-- Admin cards will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Employees Management Section -->
+                <div id="employees-section" class="section" style="display: none;">
+                    <h2><i class="fas fa-users me-2"></i>Gestion des Employés</h2>
+                    <div class="row mt-4" id="employees-list">
+                        <!-- Employee cards will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Statistics Section -->
+                <div id="stats-section" class="section" style="display: none;">
+                    <h2><i class="fas fa-chart-bar me-2"></i>Statistiques Détaillées</h2>
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-users-cog me-2"></i>Admins par Statut</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="admins-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-map-marker-alt me-2"></i>Répartition par Localisation</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="locations-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let currentSuperAdmin = null;
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in as SuperAdmin
+            const userRole = localStorage.getItem('userRole');
+            if (userRole !== 'SUPERADMIN') {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            const username = localStorage.getItem('username');
+            if (username) {
+                document.getElementById('superadmin-name').textContent = username;
+            }
+            
+            // Load dashboard data
+            loadDashboardData();
+            
+            // Setup event listeners
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            // Target audience radio buttons
+            document.querySelectorAll('input[name="targetAudience"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    showFilterSections(this.value);
+                });
+            });
+            
+            // Image preview
+            document.getElementById('news-image').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById('image-preview');
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // News form submission
+            document.getElementById('targeted-news-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                createTargetedNews();
+            });
+        }
+        
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Remove active class from all nav items
+            document.querySelectorAll('.list-group-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName + '-section').style.display = 'block';
+            
+            // Add active class to clicked nav item
+            event.target.classList.add('active');
+            
+            // Load data for specific sections
+            if (sectionName === 'admins') {
+                loadAdmins();
+            } else if (sectionName === 'employees') {
+                loadEmployees();
+            } else if (sectionName === 'stats') {
+                loadDetailedStats();
+            }
+        }
+        
+        function showFilterSections(targetType) {
+            // Hide all filter sections
+            document.querySelectorAll('.filter-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show relevant filter sections
+            if (targetType === 'department' || targetType === 'both') {
+                document.getElementById('department-filter').classList.add('active');
+            }
+            if (targetType === 'location' || targetType === 'both') {
+                document.getElementById('location-filter').classList.add('active');
+            }
+        }
+        
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/superadmin/stats', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token'),
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('total-admins').textContent = stats.totalAdmins || 0;
+                    document.getElementById('total-employees').textContent = stats.totalEmployees || 0;
+                    document.getElementById('total-news').textContent = stats.totalNews || 0;
+                    document.getElementById('active-admins').textContent = stats.activeAdmins || 0;
+                } else {
+                    console.error('Failed to load dashboard stats');
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+        
+        async function loadAdmins() {
+            try {
+                const response = await fetch('/api/superadmin/admins', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+                
+                if (response.ok) {
+                    const admins = await response.json();
+                    displayAdmins(admins);
+                } else {
+                    console.error('Failed to load admins');
+                }
+            } catch (error) {
+                console.error('Error loading admins:', error);
+            }
+        }
+        
+        function displayAdmins(admins) {
+            const container = document.getElementById('admins-list');
+            container.innerHTML = '';
+            
+            admins.forEach(admin => {
+                const adminCard = createAdminCard(admin);
+                container.appendChild(adminCard);
+            });
+        }
+        
+        function createAdminCard(admin) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 mb-3';
+            
+            col.innerHTML = `
+                <div class="card admin-card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-user-cog me-2"></i>${admin.username || 'N/A'}
+                        </h5>
+                        <p class="card-text">
+                            <strong>Département:</strong> ${admin.departmentId || 'N/A'}<br>
+                            <strong>Statut:</strong> 
+                            <span class="badge ${admin.active ? 'bg-success' : 'bg-danger'}">
+                                ${admin.active ? 'Actif' : 'Inactif'}
+                            </span><br>
+                            <small class="text-muted">Créé: ${new Date(admin.createdAt).toLocaleDateString()}</small>
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            return col;
+        }
+        
+        async function loadEmployees() {
+            try {
+                const response = await fetch('/api/superadmin/employees', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+                
+                if (response.ok) {
+                    const employees = await response.json();
+                    displayEmployees(employees);
+                } else {
+                    console.error('Failed to load employees');
+                }
+            } catch (error) {
+                console.error('Error loading employees:', error);
+            }
+        }
+        
+        function displayEmployees(employees) {
+            const container = document.getElementById('employees-list');
+            container.innerHTML = '';
+            
+            employees.forEach(employee => {
+                const employeeCard = createEmployeeCard(employee);
+                container.appendChild(employeeCard);
+            });
+        }
+        
+        function createEmployeeCard(employee) {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 mb-3';
+            
+            col.innerHTML = `
+                <div class="card employee-card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-user me-2"></i>${employee.nom || 'N/A'} ${employee.prenom || ''}
+                        </h5>
+                        <p class="card-text">
+                            <strong>Email:</strong> ${employee.email || 'N/A'}<br>
+                            <strong>Matricule:</strong> ${employee.matricule || 'N/A'}<br>
+                            <strong>Département:</strong> ${employee.departmentId || 'N/A'}<br>
+                            <small class="text-muted">Ajouté: ${new Date(employee.createdAt).toLocaleDateString()}</small>
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            return col;
+        }
+        
+        async function createTargetedNews() {
+            const title = document.getElementById('news-title').value;
+            const content = document.getElementById('news-content').value;
+            const targetAudience = document.querySelector('input[name="targetAudience"]:checked').value;
+            
+            let newsData = {
+                title: title,
+                content: content,
+                createdBy: localStorage.getItem('username'),
+                targetAudience: targetAudience
+            };
+            
+            // Add filter data based on target audience
+            if (targetAudience === 'department' || targetAudience === 'both') {
+                const selectedDepartments = Array.from(document.getElementById('department-select').selectedOptions)
+                    .map(option => option.value);
+                newsData.departmentIds = selectedDepartments;
+            }
+            
+            if (targetAudience === 'location' || targetAudience === 'both') {
+                const selectedLocations = Array.from(document.getElementById('location-select').selectedOptions)
+                    .map(option => option.value);
+                newsData.locations = selectedLocations;
+            }
+            
+            // Handle image upload if present
+            const imageFile = document.getElementById('news-image').files[0];
+            if (imageFile) {
+                try {
+                    const imageUrl = await uploadImage(imageFile);
+                    newsData.imageUrl = imageUrl;
+                } catch (error) {
+                    console.error('Image upload failed:', error);
+                    alert('Erreur lors du téléchargement de l\'image. La news sera créée sans image.');
+                }
+            }
+            
+            try {
+                const response = await fetch('/api/superadmin/news/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    },
+                    body: JSON.stringify(newsData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('News ciblée créée avec succès!');
+                    document.getElementById('targeted-news-form').reset();
+                    document.getElementById('image-preview').style.display = 'none';
+                    loadDashboardData(); // Refresh stats
+                } else {
+                    alert('Erreur: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error creating targeted news:', error);
+                alert('Erreur lors de la création de la news');
+            }
+        }
+        
+        async function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            const response = await fetch('/api/news/upload-image', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                return result.imageUrl;
+            } else {
+                throw new Error('Image upload failed');
+            }
+        }
+        
+        function loadDetailedStats() {
+            // Placeholder for detailed statistics
+            console.log('Loading detailed statistics...');
+        }
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            localStorage.removeItem('userRole');
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>

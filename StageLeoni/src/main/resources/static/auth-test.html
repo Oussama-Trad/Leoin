@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Auth Test</title>
+  </head>
+  <body>
+    <h1>Authentication Test</h1>
+    <div>
+      <button onclick="testLogin()">Test Login</button>
+      <button onclick="testAuth()">Test Auth Check</button>
+      <button onclick="clearStorage()">Clear Storage</button>
+    </div>
+    <div id="results"></div>
+
+    <script>
+      async function testLogin() {
+        const results = document.getElementById("results");
+        results.innerHTML = "Testing login...";
+
+        try {
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: "trad",
+              password: "trad",
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success && result.token) {
+            // Store tokens like the login page does
+            sessionStorage.setItem("currentAdmin", "trad");
+            sessionStorage.setItem("authToken", result.token);
+            localStorage.setItem("adminToken", result.token);
+
+            results.innerHTML = `Login successful!<br>Token: ${result.token}<br>Stored in localStorage and sessionStorage`;
+          } else {
+            results.innerHTML = `Login failed: ${result.message}`;
+          }
+        } catch (error) {
+          results.innerHTML = `Login error: ${error.message}`;
+        }
+      }
+
+      async function testAuth() {
+        const results = document.getElementById("results");
+        results.innerHTML = "Testing authentication...";
+
+        try {
+          const token =
+            localStorage.getItem("adminToken") ||
+            sessionStorage.getItem("authToken");
+
+          if (!token) {
+            results.innerHTML = "No token found in storage";
+            return;
+          }
+
+          results.innerHTML = `Found token: ${token}<br>Validating with server...`;
+
+          const response = await fetch("/api/auth/user-info", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const userInfo = await response.json();
+            results.innerHTML = `Authentication successful!<br>User: ${userInfo.username}<br>Role: ${userInfo.role}`;
+          } else {
+            results.innerHTML = `Authentication failed: ${response.status}`;
+          }
+        } catch (error) {
+          results.innerHTML = `Auth error: ${error.message}`;
+        }
+      }
+
+      function clearStorage() {
+        localStorage.removeItem("adminToken");
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("currentAdmin");
+        document.getElementById("results").innerHTML = "Storage cleared";
+      }
+    </script>
+  </body>
+</html>

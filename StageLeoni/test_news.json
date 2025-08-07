@@ -1,0 +1,7 @@
+{
+  "title": "News de test finale",
+  "content": "Cette news devrait apparaitre dans le dashboard",
+  "visibility": {
+    "status": "published"
+  }
+}

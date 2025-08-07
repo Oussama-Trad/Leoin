@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Authentication Debug</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .log {
+        background: #f0f0f0;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+      }
+      .error {
+        background: #ffebee;
+        border-left: 4px solid #f44336;
+      }
+      .success {
+        background: #e8f5e8;
+        border-left: 4px solid #4caf50;
+      }
+      .warning {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Authentication Debug Tool</h1>
+
+    <div>
+      <button onclick="clearAll()">Clear All Storage</button>
+      <button onclick="testLogin()">Test Login</button>
+      <button onclick="testUserInfo()">Test User Info</button>
+      <button onclick="checkStorage()">Check Storage</button>
+      <button onclick="testDashboard()">Test Dashboard Access</button>
+    </div>
+
+    <div id="logs"></div>
+
+    <script>
+      function log(message, type = "log") {
+        const logs = document.getElementById("logs");
+        const div = document.createElement("div");
+        div.className = `log ${type}`;
+        div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+        logs.appendChild(div);
+        logs.scrollTop = logs.scrollHeight;
+        console.log(message);
+      }
+
+      function clearAll() {
+        localStorage.clear();
+        sessionStorage.clear();
+        log("All storage cleared", "warning");
+      }
+
+      function checkStorage() {
+        const adminToken = localStorage.getItem("adminToken");
+        const authToken = sessionStorage.getItem("authToken");
+        const currentAdmin = sessionStorage.getItem("currentAdmin");
+
+        log(
+          `Storage Status:<br>
+                - localStorage.adminToken: ${
+                  adminToken ? "PRESENT" : "MISSING"
+                }<br>
+                - sessionStorage.authToken: ${
+                  authToken ? "PRESENT" : "MISSING"
+                }<br>
+                - sessionStorage.currentAdmin: ${currentAdmin || "MISSING"}`,
+          adminToken || authToken ? "success" : "error"
+        );
+      }
+
+      async function testLogin() {
+        log("Testing login with admin/admin...", "log");
+
+        try {
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: "admin", password: "admin" }),
+          });
+
+          const result = await response.json();
+
+          if (result.success && result.token) {
+            // Store tokens like the login page does
+            sessionStorage.setItem("currentAdmin", "admin");
+            sessionStorage.setItem("authToken", result.token);
+            localStorage.setItem("adminToken", result.token);
+
+            log(
+              `Login successful!<br>
+                        - Token: ${result.token}<br>
+                        - Username: ${result.username}<br>
+                        - Role: ${result.role}`,
+              "success"
+            );
+          } else {
+            log(`Login failed: ${result.message}`, "error");
+          }
+        } catch (error) {
+          log(`Login error: ${error.message}`, "error");
+        }
+      }
+
+      async function testUserInfo() {
+        log("Testing user info endpoint...", "log");
+
+        try {
+          const token =
+            localStorage.getItem("adminToken") ||
+            sessionStorage.getItem("authToken");
+
+          if (!token) {
+            log("No token found in storage", "error");
+            return;
+          }
+
+          log(`Using token: ${token.substring(0, 50)}...`, "log");
+
+          const response = await fetch("/api/auth/user-info", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            log(
+              `User info retrieved successfully!<br>
+                        - Username: ${result.username}<br>
+                        - Role: ${result.role}<br>
+                        - Success: ${result.success}`,
+              "success"
+            );
+          } else {
+            log(
+              `User info failed: ${response.status} - ${result.message}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          log(`User info error: ${error.message}`, "error");
+        }
+      }
+
+      async function testDashboard() {
+        log("Testing dashboard access...", "log");
+
+        try {
+          const response = await fetch("/dashboard");
+
+          if (response.ok) {
+            log("Dashboard accessible - response OK", "success");
+          } else {
+            log(`Dashboard access failed: ${response.status}`, "error");
+          }
+        } catch (error) {
+          log(`Dashboard error: ${error.message}`, "error");
+        }
+      }
+
+      // Auto-check storage on page load
+      window.onload = function () {
+        log("Page loaded - checking initial state", "log");
+        checkStorage();
+      };
+    </script>
+  </body>
+</html>

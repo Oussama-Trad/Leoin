@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leoni Admin Panel</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        padding: 20px 0;
+      }
+
+      /* Animated background */
+      body::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="1" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="1" fill="white" opacity="0.1"/><circle cx="90" cy="30" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        animation: float 20s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-20px);
+        }
+      }
+
+      .login-container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 50px;
+        border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 450px;
+        position: relative;
+        z-index: 1;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .login-header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .company-logo {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 32px;
+        color: white;
+        box-shadow: 0 10px 30px rgba(30, 60, 114, 0.3);
+      }
+
+      .login-header h1 {
+        color: #1e3c72;
+        font-size: 32px;
+        margin-bottom: 5px;
+        font-weight: 700;
+      }
+
+      .login-header p {
+        color: #666;
+        font-size: 16px;
+        font-weight: 400;
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+        position: relative;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 10px;
+        color: #1e3c72;
+        font-weight: 600;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .input-wrapper {
+        position: relative;
+      }
+
+      .input-wrapper i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #666;
+        font-size: 16px;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 15px 15px 15px 45px;
+        border: 2px solid #e1e5e9;
+        border-radius: 12px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .form-group select {
+        width: 100%;
+        padding: 15px 15px 15px 45px;
+        border: 2px solid #e1e5e9;
+        border-radius: 12px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.8);
+        cursor: pointer;
+      }
+
+      .form-group select:disabled {
+        background: rgba(245, 245, 245, 0.8);
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #2a5298;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+      }
+
+      .login-btn {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .login-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(30, 60, 114, 0.3);
+      }
+
+      .login-btn:active {
+        transform: translateY(0);
+      }
+
+      .login-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .loading-spinner {
+        display: none;
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        border: 2px solid transparent;
+        border-top: 2px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: translateY(-50%) rotate(0deg);
+        }
+        100% {
+          transform: translateY(-50%) rotate(360deg);
+        }
+      }
+
+      .alert {
+        margin-bottom: 25px;
+        padding: 15px;
+        border-radius: 12px;
+        display: none;
+        position: relative;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .alert.error {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        color: white;
+        border: none;
+      }
+
+      .alert.success {
+        background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+        color: white;
+        border: none;
+      }
+
+      .alert i {
+        margin-right: 10px;
+      }
+
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 25px;
+        border-top: 1px solid rgba(225, 229, 233, 0.5);
+        color: #666;
+        font-size: 13px;
+      }
+
+      .footer p {
+        margin-bottom: 5px;
+      }
+
+      .version-info {
+        color: #999;
+        font-size: 12px;
+      }
+
+      /* Responsive design */
+      @media (max-width: 480px) {
+        .login-container {
+          padding: 30px 25px;
+          margin: 20px;
+        }
+
+        .login-header h1 {
+          font-size: 26px;
+        }
+
+        .company-logo {
+          width: 60px;
+          height: 60px;
+          font-size: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="login-header">
+        <div class="company-logo">
+          <i class="fas fa-cog"></i>
+        </div>
+        <h1>LEONI</h1>
+        <p>Admin Management System</p>
+      </div>
+
+      <!-- Mode Toggle -->
+      <div
+        class="mode-toggle"
+        style="
+          display: flex;
+          margin-bottom: 20px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          overflow: hidden;
+        "
+      >
+        <button
+          id="loginModeBtn"
+          class="mode-btn"
+          style="
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: #4caf50;
+            color: white;
+            cursor: pointer;
+          "
+        >
+          Login
+        </button>
+        <button
+          id="createModeBtn"
+          class="mode-btn"
+          style="
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: #f5f5f5;
+            color: #333;
+            cursor: pointer;
+          "
+        >
+          Create Admin
+        </button>
+      </div>
+
+      <div class="alert error" id="errorAlert">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="errorMessage"></span>
+      </div>
+      <div class="alert success" id="successAlert">
+        <i class="fas fa-check-circle"></i>
+        <span id="successMessage"></span>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username"> <i class="fas fa-user"></i> Username </label>
+          <div class="input-wrapper">
+            <i class="fas fa-user"></i>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              required
+              placeholder="Enter your username"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password"> <i class="fas fa-lock"></i> Password </label>
+          <div class="input-wrapper">
+            <i class="fas fa-lock"></i>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              placeholder="Enter your password"
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn" id="loginButton">
+          <span>Access Admin Panel</span>
+          <div class="loading-spinner" id="loadingSpinner"></div>
+        </button>
+      </form>
+
+      <!-- Create Admin Form -->
+      <form id="createAdminForm" style="display: none">
+        <div class="form-group">
+          <label for="newUsername">
+            <i class="fas fa-user"></i> Username
+          </label>
+          <div class="input-wrapper">
+            <i class="fas fa-user"></i>
+            <input
+              type="text"
+              id="newUsername"
+              name="newUsername"
+              required
+              placeholder="Enter admin username"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="newPassword">
+            <i class="fas fa-lock"></i> Password
+          </label>
+          <div class="input-wrapper">
+            <i class="fas fa-lock"></i>
+            <input
+              type="password"
+              id="newPassword"
+              name="newPassword"
+              required
+              placeholder="Enter admin password"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="locationSelect">
+            <i class="fas fa-map-marker-alt"></i> Location
+          </label>
+          <div class="input-wrapper">
+            <i class="fas fa-map-marker-alt"></i>
+            <select id="locationSelect" name="location" required>
+              <option value="">Select Location</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="departmentSelect">
+            <i class="fas fa-users"></i> Department
+          </label>
+          <div class="input-wrapper">
+            <i class="fas fa-users"></i>
+            <select id="departmentSelect" name="department" required disabled>
+              <option value="">Select Department</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn" id="createAdminButton">
+          <span>Create Admin Account</span>
+          <div class="loading-spinner" id="createLoadingSpinner"></div>
+        </button>
+      </form>
+
+      <div class="footer">
+        <p>&copy; 2025 Leoni Group. All rights reserved.</p>
+        <p class="version-info">Admin Panel v2.0 | Secure Access System</p>
+      </div>
+    </div>
+
+    <script>
+      // Global variables for department hierarchy
+      let departmentHierarchy = {};
+
+      // Load department hierarchy on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        loadDepartmentHierarchy();
+      });
+
+      // Mode toggle functionality
+      document
+        .getElementById("loginModeBtn")
+        .addEventListener("click", function () {
+          document.getElementById("loginForm").style.display = "block";
+          document.getElementById("createAdminForm").style.display = "none";
+          this.style.background = "#4CAF50";
+          this.style.color = "white";
+          document.getElementById("createModeBtn").style.background = "#f5f5f5";
+          document.getElementById("createModeBtn").style.color = "#333";
+        });
+
+      document
+        .getElementById("createModeBtn")
+        .addEventListener("click", function () {
+          document.getElementById("loginForm").style.display = "none";
+          document.getElementById("createAdminForm").style.display = "block";
+          this.style.background = "#4CAF50";
+          this.style.color = "white";
+          document.getElementById("loginModeBtn").style.background = "#f5f5f5";
+          document.getElementById("loginModeBtn").style.color = "#333";
+          // Populate locations if data is already loaded
+          if (
+            departmentHierarchy &&
+            Object.keys(departmentHierarchy).length > 0
+          ) {
+            populateLocationsForAdmin();
+          }
+        });
+
+      // Load department data for create admin form
+      async function loadDepartmentHierarchy() {
+        try {
+          const response = await fetch("/api/admin/creation-options");
+          const data = await response.json();
+
+          if (data && data.success && data.locations) {
+            departmentHierarchy = data;
+            console.log("Department data loaded:", departmentHierarchy);
+            // Automatically populate locations
+            populateLocationsForAdmin();
+          } else {
+            console.error("Failed to load department data: No locations found");
+          }
+        } catch (error) {
+          console.error("Error loading department data:", error);
+        }
+      }
+
+      // Populate locations for admin creation
+      function populateLocationsForAdmin() {
+        const locationSelect = document.getElementById("locationSelect");
+        locationSelect.innerHTML = '<option value="">Select Location</option>';
+
+        console.log(
+          "Populating locations for admin creation:",
+          departmentHierarchy
+        );
+
+        if (
+          departmentHierarchy &&
+          departmentHierarchy.locations &&
+          departmentHierarchy.locations.length > 0
+        ) {
+          // Populate locations
+          departmentHierarchy.locations.forEach((locationName) => {
+            const option = document.createElement("option");
+            option.value = locationName;
+            option.textContent = locationName;
+            locationSelect.appendChild(option);
+          });
+
+          // Enable location select
+          locationSelect.disabled = false;
+        } else {
+          console.warn("No department data available");
+        }
+      }
+
+      // Location selection change handler
+      document
+        .getElementById("locationSelect")
+        .addEventListener("change", function () {
+          const locationName = this.value;
+          const departmentSelect = document.getElementById("departmentSelect");
+
+          // Reset department
+          departmentSelect.innerHTML =
+            '<option value="">Select Department</option>';
+          departmentSelect.disabled = !locationName;
+
+          if (
+            locationName &&
+            departmentHierarchy &&
+            departmentHierarchy.departmentsByLocation &&
+            departmentHierarchy.departmentsByLocation[locationName]
+          ) {
+            // Get departments for selected location
+            const departments =
+              departmentHierarchy.departmentsByLocation[locationName];
+
+            departments.forEach((departmentName) => {
+              const option = document.createElement("option");
+              option.value = departmentName;
+              option.textContent = departmentName;
+              departmentSelect.appendChild(option);
+            });
+          }
+        });
+
+      // Login form handler
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const username = document.getElementById("username").value;
+          const password = document.getElementById("password").value;
+          const errorAlert = document.getElementById("errorAlert");
+          const successAlert = document.getElementById("successAlert");
+          const errorMessage = document.getElementById("errorMessage");
+          const successMessage = document.getElementById("successMessage");
+          const loginButton = document.getElementById("loginButton");
+          const loadingSpinner = document.getElementById("loadingSpinner");
+
+          // Show loading state
+          loginButton.disabled = true;
+          loadingSpinner.style.display = "block";
+
+          // Hide alerts
+          errorAlert.style.display = "none";
+          successAlert.style.display = "none";
+
+          try {
+            console.log("Attempting login with:", username);
+            const response = await fetch("/api/auth/login", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ username, password }),
+            });
+
+            console.log("Response status:", response.status);
+            const data = await response.json();
+            console.log("Login response:", data);
+
+            // Verify we have the expected response structure
+            if (!data.hasOwnProperty("success")) {
+              throw new Error("Invalid response format from server");
+            }
+
+            if (data.success) {
+              successMessage.textContent =
+                "Authentication successful! Welcome to Leoni Admin Panel.";
+              successAlert.style.display = "block";
+
+              // Store authentication token
+              if (data.token) {
+                sessionStorage.setItem("authToken", data.token);
+                localStorage.setItem("adminToken", data.token);
+                console.log(
+                  "Token stored:",
+                  data.token.substring(0, 20) + "..."
+                );
+              }
+
+              // Store admin info in session storage using the correct fields from AuthResponse
+              if (data.username) {
+                const adminInfo = {
+                  username: data.username,
+                  role: data.role || "ADMIN",
+                  userId: data.userId,
+                  location: data.location,
+                  department: data.department,
+                };
+                sessionStorage.setItem("adminInfo", JSON.stringify(adminInfo));
+                sessionStorage.setItem("currentAdmin", data.username);
+                console.log("Admin info stored:", data.username);
+              }
+
+              // Redirect to dashboard with admin username parameter
+              setTimeout(() => {
+                const adminUsername = data.username || username;
+                console.log(
+                  "Redirecting to dashboard with username:",
+                  adminUsername
+                );
+
+                // Force redirection even if there are any issues
+                try {
+                  window.location.href = `/dashboard?adminUsername=${adminUsername}`;
+                } catch (redirectError) {
+                  console.error("Redirection error:", redirectError);
+                  // Fallback redirection
+                  window.location = `/dashboard`;
+                }
+              }, 1500);
+            } else {
+              console.log("Login failed:", data.message);
+              errorMessage.textContent =
+                data.message || "Invalid credentials. Please try again.";
+              errorAlert.style.display = "block";
+            }
+          } catch (error) {
+            console.error("Login error:", error);
+            errorMessage.textContent =
+              "Connection error. Please check your network and try again.";
+            errorAlert.style.display = "block";
+          } finally {
+            // Hide loading state
+            loginButton.disabled = false;
+            loadingSpinner.style.display = "none";
+          }
+        });
+
+      // Create admin form handler
+      document
+        .getElementById("createAdminForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const username = document.getElementById("newUsername").value;
+          const password = document.getElementById("newPassword").value;
+          const location = document.getElementById("locationSelect").value;
+          const department = document.getElementById("departmentSelect").value;
+          const errorAlert = document.getElementById("errorAlert");
+          const successAlert = document.getElementById("successAlert");
+          const errorMessage = document.getElementById("errorMessage");
+          const successMessage = document.getElementById("successMessage");
+          const createButton = document.getElementById("createAdminButton");
+          const loadingSpinner = document.getElementById(
+            "createLoadingSpinner"
+          );
+
+          // Show loading state
+          createButton.disabled = true;
+          loadingSpinner.style.display = "block";
+
+          // Hide alerts
+          errorAlert.style.display = "none";
+          successAlert.style.display = "none";
+
+          try {
+            const response = await fetch("/api/admin/create", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                username,
+                password,
+                location,
+                department,
+              }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              successMessage.textContent =
+                "Admin account created successfully!";
+              successAlert.style.display = "block";
+
+              // Reset form
+              document.getElementById("createAdminForm").reset();
+              document.getElementById("departmentSelect").disabled = true;
+
+              // Repopulate locations
+              populateLocationsForAdmin();
+
+              // Switch back to login mode after 2 seconds
+              setTimeout(() => {
+                document.getElementById("loginModeBtn").click();
+              }, 2000);
+            } else {
+              errorMessage.textContent =
+                data.message || "Failed to create admin account.";
+              errorAlert.style.display = "block";
+            }
+          } catch (error) {
+            errorMessage.textContent =
+              "Connection error. Please check your network and try again.";
+            errorAlert.style.display = "block";
+          } finally {
+            // Hide loading state
+            createButton.disabled = false;
+            loadingSpinner.style.display = "none";
+          }
+        });
+
+      // Add interactive feedback for form fields
+      document
+        .getElementById("username")
+        .addEventListener("input", function () {
+          this.style.borderColor = this.value ? "#2a5298" : "#e1e5e9";
+        });
+
+      document
+        .getElementById("password")
+        .addEventListener("input", function () {
+          this.style.borderColor = this.value ? "#2a5298" : "#e1e5e9";
+        });
+
+      document
+        .getElementById("newUsername")
+        .addEventListener("input", function () {
+          this.style.borderColor = this.value ? "#2a5298" : "#e1e5e9";
+        });
+
+      document
+        .getElementById("newPassword")
+        .addEventListener("input", function () {
+          this.style.borderColor = this.value ? "#2a5298" : "#e1e5e9";
+        });
+    </script>
+  </body>
+</html>

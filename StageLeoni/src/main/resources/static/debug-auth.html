@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Debug Authentication</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .step {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      .success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+      }
+      .info {
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Debug Dashboard Authentication</h1>
+
+    <div class="step">
+      <h3>Étape 1: Test de connexion</h3>
+      <button onclick="testLogin()">Se connecter</button>
+      <div id="loginResult"></div>
+    </div>
+
+    <div class="step">
+      <h3>Étape 2: Vérifier le stockage</h3>
+      <button onclick="checkStorage()">Vérifier le stockage</button>
+      <div id="storageResult"></div>
+    </div>
+
+    <div class="step">
+      <h3>Étape 3: Test API user-info</h3>
+      <button onclick="testUserInfo()">Tester API user-info</button>
+      <div id="userInfoResult"></div>
+    </div>
+
+    <div class="step">
+      <h3>Étape 4: Accéder au dashboard</h3>
+      <button onclick="goToDashboard()">Aller au dashboard</button>
+      <div id="dashboardResult"></div>
+    </div>
+
+    <div class="step">
+      <h3>Étape 5: Effacer le stockage</h3>
+      <button onclick="clearStorage()">Effacer tout</button>
+      <div id="clearResult"></div>
+    </div>
+
+    <script>
+      async function testLogin() {
+        const result = document.getElementById("loginResult");
+        result.innerHTML = "Connexion en cours...";
+
+        try {
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: "admin",
+              password: "admin",
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.success && data.token) {
+            // Stocker les tokens comme le fait la page de login
+            sessionStorage.setItem("currentAdmin", data.username);
+            sessionStorage.setItem("authToken", data.token);
+            localStorage.setItem("adminToken", data.token);
+
+            result.className = "step success";
+            result.innerHTML = `
+                        <h4>✅ Connexion réussie!</h4>
+                        <pre>Username: ${data.username}
+Role: ${data.role}
+Token: ${data.token.substring(0, 50)}...
+UserID: ${data.userId}</pre>
+                    `;
+          } else {
+            result.className = "step error";
+            result.innerHTML = `<h4>❌ Échec de connexion</h4><pre>${JSON.stringify(
+              data,
+              null,
+              2
+            )}</pre>`;
+          }
+        } catch (error) {
+          result.className = "step error";
+          result.innerHTML = `<h4>❌ Erreur de connexion</h4><pre>${error.message}</pre>`;
+        }
+      }
+
+      function checkStorage() {
+        const result = document.getElementById("storageResult");
+
+        const adminToken = localStorage.getItem("adminToken");
+        const authToken = sessionStorage.getItem("authToken");
+        const currentAdmin = sessionStorage.getItem("currentAdmin");
+
+        result.className = "step info";
+        result.innerHTML = `
+                <h4>📦 État du stockage</h4>
+                <pre>localStorage.adminToken: ${
+                  adminToken ? adminToken.substring(0, 50) + "..." : "VIDE"
+                }
+sessionStorage.authToken: ${
+          authToken ? authToken.substring(0, 50) + "..." : "VIDE"
+        }
+sessionStorage.currentAdmin: ${currentAdmin || "VIDE"}</pre>
+            `;
+      }
+
+      async function testUserInfo() {
+        const result = document.getElementById("userInfoResult");
+        result.innerHTML = "Test de l'API user-info...";
+
+        try {
+          const token =
+            localStorage.getItem("adminToken") ||
+            sessionStorage.getItem("authToken");
+
+          if (!token) {
+            result.className = "step error";
+            result.innerHTML = "<h4>❌ Aucun token trouvé</h4>";
+            return;
+          }
+
+          const response = await fetch("/api/auth/user-info", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success) {
+            result.className = "step success";
+            result.innerHTML = `
+                        <h4>✅ API user-info OK!</h4>
+                        <pre>Status: ${response.status}
+Username: ${data.username}
+Role: ${data.role}
+Message: ${data.message}</pre>
+                    `;
+          } else {
+            result.className = "step error";
+            result.innerHTML = `
+                        <h4>❌ API user-info échoué</h4>
+                        <pre>Status: ${response.status}
+Response: ${JSON.stringify(data, null, 2)}</pre>
+                    `;
+          }
+        } catch (error) {
+          result.className = "step error";
+          result.innerHTML = `<h4>❌ Erreur API</h4><pre>${error.message}</pre>`;
+        }
+      }
+
+      function goToDashboard() {
+        const result = document.getElementById("dashboardResult");
+        result.className = "step info";
+        result.innerHTML = "<h4>🔄 Redirection vers le dashboard...</h4>";
+
+        // Ouvrir dans un nouvel onglet pour voir ce qui se passe
+        window.open("/dashboard", "_blank");
+      }
+
+      function clearStorage() {
+        localStorage.removeItem("adminToken");
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("currentAdmin");
+
+        const result = document.getElementById("clearResult");
+        result.className = "step info";
+        result.innerHTML = "<h4>🧹 Stockage effacé</h4>";
+      }
+
+      // Auto-vérifier le stockage au chargement
+      window.onload = function () {
+        checkStorage();
+      };
+    </script>
+  </body>
+</html>

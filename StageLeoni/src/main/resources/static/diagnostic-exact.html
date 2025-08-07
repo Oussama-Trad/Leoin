@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Diagnostic Connexion Exact</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+      }
+      .info {
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+      }
+      .warning {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+        border: none;
+        border-radius: 4px;
+        background: #007bff;
+        color: white;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 3px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+      input {
+        padding: 8px;
+        margin: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .log-entry {
+        margin: 5px 0;
+        padding: 5px;
+        background: #f9f9f9;
+        border-left: 3px solid #007bff;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔍 Diagnostic Exact du Problème de Connexion</h1>
+
+      <div class="test-section info">
+        <h3>🧪 Test de Connexion Identique à welcome.html</h3>
+        <input
+          type="text"
+          id="testUsername"
+          placeholder="Username"
+          value="admin"
+        />
+        <input
+          type="password"
+          id="testPassword"
+          placeholder="Password"
+          value="admin"
+        />
+        <button onclick="exactSameLogin()">🚀 Test Connexion Exact</button>
+        <div id="loginResult"></div>
+        <div id="logOutput"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 Analyse en Temps Réel</h3>
+        <div id="analysisResult"></div>
+      </div>
+    </div>
+
+    <script>
+      let logMessages = [];
+
+      function addLog(message, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        logMessages.push(`[${timestamp}] ${message}`);
+        updateLogDisplay();
+        console.log(`[DIAGNOSTIC] ${message}`);
+      }
+
+      function updateLogDisplay() {
+        const logOutput = document.getElementById("logOutput");
+        logOutput.innerHTML =
+          "<h4>📝 Logs en temps réel:</h4>" +
+          logMessages
+            .slice(-10)
+            .map((log) => `<div class="log-entry">${log}</div>`)
+            .join("");
+      }
+
+      async function exactSameLogin() {
+        const username = document.getElementById("testUsername").value;
+        const password = document.getElementById("testPassword").value;
+        const resultDiv = document.getElementById("loginResult");
+        const analysisDiv = document.getElementById("analysisResult");
+
+        logMessages = []; // Reset logs
+        addLog("🔄 Début du test de connexion");
+
+        resultDiv.innerHTML = "<p>⏳ Test en cours...</p>";
+        analysisDiv.innerHTML = "<p>📈 Analyse en cours...</p>";
+
+        try {
+          addLog(`📤 Envoi de la requête pour utilisateur: ${username}`);
+
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ username, password }),
+          });
+
+          addLog(`📥 Réponse reçue - Status: ${response.status}`);
+
+          const data = await response.json();
+          addLog(`🔍 Données parsées: ${JSON.stringify(data, null, 2)}`);
+
+          // Vérification EXACTE comme dans welcome.html
+          if (!data.hasOwnProperty("success")) {
+            addLog(
+              '❌ ERREUR: Pas de propriété "success" dans la réponse',
+              "error"
+            );
+            throw new Error("Invalid response format from server");
+          }
+
+          addLog(`✅ Propriété success trouvée: ${data.success}`);
+
+          if (data.success) {
+            addLog("🎉 Connexion réussie!", "success");
+
+            // Store authentication token
+            if (data.token) {
+              sessionStorage.setItem("authToken", data.token);
+              localStorage.setItem("adminToken", data.token);
+              addLog(
+                `🔐 Token stocké: ${data.token.substring(0, 20)}...`,
+                "success"
+              );
+            } else {
+              addLog("⚠️ Pas de token dans la réponse", "warning");
+            }
+
+            // Store admin info
+            if (data.username) {
+              const adminInfo = {
+                username: data.username,
+                role: data.role || "ADMIN",
+                userId: data.userId,
+                location: data.location,
+                department: data.department,
+              };
+              sessionStorage.setItem("adminInfo", JSON.stringify(adminInfo));
+              sessionStorage.setItem("currentAdmin", data.username);
+              addLog(`👤 Info admin stockée: ${data.username}`, "success");
+            } else {
+              addLog("⚠️ Pas de username dans la réponse", "warning");
+            }
+
+            // Test de redirection
+            const adminUsername = data.username || username;
+            addLog(
+              `🔄 Préparation redirection vers: /dashboard?adminUsername=${adminUsername}`,
+              "info"
+            );
+
+            resultDiv.className = "test-section success";
+            resultDiv.innerHTML = `
+                        <h4>✅ Connexion Réussie!</h4>
+                        <p><strong>Username:</strong> ${data.username}</p>
+                        <p><strong>Role:</strong> ${data.role}</p>
+                        <p><strong>Token:</strong> ${
+                          data.token
+                            ? data.token.substring(0, 30) + "..."
+                            : "Absent"
+                        }</p>
+                        <p><strong>URL de redirection:</strong> /dashboard?adminUsername=${adminUsername}</p>
+                        <button onclick="manualRedirect('${adminUsername}')">🚀 Test Redirection</button>
+                    `;
+
+            analysisDiv.className = "test-section success";
+            analysisDiv.innerHTML = `
+                        <h4>📊 Analyse:</h4>
+                        <p>✅ API fonctionne correctement</p>
+                        <p>✅ Structure de réponse valide</p>
+                        <p>✅ Données stockées dans sessionStorage</p>
+                        <p>🔄 Redirection devrait fonctionner</p>
+                    `;
+          } else {
+            addLog(`❌ Connexion échouée: ${data.message}`, "error");
+
+            resultDiv.className = "test-section error";
+            resultDiv.innerHTML = `
+                        <h4>❌ Connexion Échouée</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+
+            analysisDiv.className = "test-section error";
+            analysisDiv.innerHTML = `
+                        <h4>📊 Analyse:</h4>
+                        <p>❌ API a retourné success: false</p>
+                        <p>Message: ${data.message || "Aucun message"}</p>
+                    `;
+          }
+        } catch (error) {
+          addLog(`💥 ERREUR CRITIQUE: ${error.message}`, "error");
+
+          resultDiv.className = "test-section error";
+          resultDiv.innerHTML = `
+                    <h4>💥 Erreur Critique</h4>
+                    <pre>${error.message}</pre>
+                    <pre>${error.stack}</pre>
+                `;
+
+          analysisDiv.className = "test-section error";
+          analysisDiv.innerHTML = `
+                    <h4>📊 Analyse:</h4>
+                    <p>💥 Erreur JavaScript détectée</p>
+                    <p>Cause possible: ${error.message}</p>
+                `;
+        }
+      }
+
+      function manualRedirect(adminUsername) {
+        addLog(
+          `🚀 Redirection manuelle vers: /dashboard?adminUsername=${adminUsername}`
+        );
+        window.location.href = `/dashboard?adminUsername=${adminUsername}`;
+      }
+
+      // Auto-check storage on load
+      window.onload = function () {
+        addLog("🔍 Page de diagnostic chargée");
+
+        const authToken = sessionStorage.getItem("authToken");
+        const currentAdmin = sessionStorage.getItem("currentAdmin");
+
+        if (authToken) {
+          addLog(`🔐 Token existant trouvé: ${authToken.substring(0, 20)}...`);
+        }
+        if (currentAdmin) {
+          addLog(`👤 Admin actuel: ${currentAdmin}`);
+        }
+      };
+    </script>
+  </body>
+</html>

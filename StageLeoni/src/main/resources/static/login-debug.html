@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Debug Login Issue</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+      }
+      .info {
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+        border: none;
+        border-radius: 4px;
+        background: #007bff;
+        color: white;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 3px;
+        overflow-x: auto;
+      }
+      input {
+        padding: 8px;
+        margin: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Debug Login Redirection Issue</h1>
+
+      <div class="test-section">
+        <h3>Étape 1: Test de l'API de connexion</h3>
+        <input
+          type="text"
+          id="testUsername"
+          placeholder="Username"
+          value="admin"
+        />
+        <input
+          type="password"
+          id="testPassword"
+          placeholder="Password"
+          value="admin"
+        />
+        <button onclick="testLogin()">Tester la connexion</button>
+        <div id="loginResult"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Étape 2: Vérifier le stockage de session</h3>
+        <button onclick="checkStorage()">Vérifier le stockage</button>
+        <div id="storageResult"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Étape 3: Test de redirection manuelle</h3>
+        <button onclick="manualRedirect()">
+          Redirection manuelle vers dashboard
+        </button>
+        <div id="redirectResult"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Étape 4: Simuler le processus complet</h3>
+        <button onclick="simulateFullLogin()">
+          Simuler connexion complète
+        </button>
+        <div id="simulationResult"></div>
+      </div>
+    </div>
+
+    <script>
+      async function testLogin() {
+        const username = document.getElementById("testUsername").value;
+        const password = document.getElementById("testPassword").value;
+        const resultDiv = document.getElementById("loginResult");
+
+        resultDiv.innerHTML = "<p>Test en cours...</p>";
+
+        try {
+          console.log("Sending login request...");
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ username, password }),
+          });
+
+          console.log("Response status:", response.status);
+          const data = await response.json();
+          console.log("Response data:", data);
+
+          let resultClass = data.success ? "success" : "error";
+          resultDiv.className = "test-section " + resultClass;
+          resultDiv.innerHTML = `
+                    <h4>Résultat de l'API:</h4>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Success:</strong> ${data.success}</p>
+                    <p><strong>Token présent:</strong> ${
+                      data.token
+                        ? "Oui (" + data.token.substring(0, 20) + "...)"
+                        : "Non"
+                    }</p>
+                    <p><strong>Username:</strong> ${
+                      data.username || "Non présent"
+                    }</p>
+                    <p><strong>Role:</strong> ${data.role || "Non présent"}</p>
+                    <p><strong>Admin info (old format):</strong> ${
+                      data.admin ? "Oui" : "Non"
+                    }</p>
+                    <p><strong>Message:</strong> ${data.message || "Aucun"}</p>
+                `;
+
+          // Store token if available
+          if (data.success && data.token) {
+            sessionStorage.setItem("authToken", data.token);
+            if (data.admin) {
+              sessionStorage.setItem("adminInfo", JSON.stringify(data.admin));
+              sessionStorage.setItem("currentAdmin", data.admin.username);
+            }
+          }
+        } catch (error) {
+          console.error("Login error:", error);
+          resultDiv.className = "test-section error";
+          resultDiv.innerHTML = `
+                    <h4>Erreur:</h4>
+                    <pre>${error.message}</pre>
+                `;
+        }
+      }
+
+      function checkStorage() {
+        const resultDiv = document.getElementById("storageResult");
+
+        const authToken = sessionStorage.getItem("authToken");
+        const adminInfo = sessionStorage.getItem("adminInfo");
+        const currentAdmin = sessionStorage.getItem("currentAdmin");
+        const adminToken = localStorage.getItem("adminToken");
+
+        resultDiv.className = "test-section info";
+        resultDiv.innerHTML = `
+                <h4>Contenu du stockage:</h4>
+                <p><strong>sessionStorage.authToken:</strong> ${
+                  authToken
+                    ? "Présent (" + authToken.substring(0, 20) + "...)"
+                    : "Absent"
+                }</p>
+                <p><strong>sessionStorage.adminInfo:</strong> ${
+                  adminInfo ? "Présent" : "Absent"
+                }</p>
+                <p><strong>sessionStorage.currentAdmin:</strong> ${
+                  currentAdmin || "Absent"
+                }</p>
+                <p><strong>localStorage.adminToken:</strong> ${
+                  adminToken
+                    ? "Présent (" + adminToken.substring(0, 20) + "...)"
+                    : "Absent"
+                }</p>
+                <pre>${JSON.stringify(
+                  {
+                    authToken: authToken,
+                    adminInfo: adminInfo,
+                    currentAdmin: currentAdmin,
+                    adminToken: adminToken,
+                  },
+                  null,
+                  2
+                )}</pre>
+            `;
+      }
+
+      function manualRedirect() {
+        const resultDiv = document.getElementById("redirectResult");
+        resultDiv.className = "test-section info";
+        resultDiv.innerHTML = "<p>Redirection en cours vers /dashboard...</p>";
+
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1000);
+      }
+
+      async function simulateFullLogin() {
+        const resultDiv = document.getElementById("simulationResult");
+        resultDiv.innerHTML = "<p>Simulation en cours...</p>";
+
+        try {
+          // Step 1: Login
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              username: "admin",
+              password: "admin",
+            }),
+          });
+
+          const data = await response.json();
+          console.log("Full simulation - login response:", data);
+
+          if (data.success) {
+            // Step 2: Store tokens
+            if (data.token) {
+              sessionStorage.setItem("authToken", data.token);
+            }
+            if (data.admin) {
+              sessionStorage.setItem("adminInfo", JSON.stringify(data.admin));
+              sessionStorage.setItem("currentAdmin", data.admin.username);
+            }
+
+            resultDiv.className = "test-section success";
+            resultDiv.innerHTML = `
+                        <h4>Connexion réussie!</h4>
+                        <p>Redirection vers dashboard dans 2 secondes...</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+
+            // Step 3: Redirect
+            setTimeout(() => {
+              const adminUsername = data.admin ? data.admin.username : "admin";
+              console.log(
+                "Redirecting to:",
+                `/dashboard?adminUsername=${adminUsername}`
+              );
+              window.location.href = `/dashboard?adminUsername=${adminUsername}`;
+            }, 2000);
+          } else {
+            resultDiv.className = "test-section error";
+            resultDiv.innerHTML = `
+                        <h4>Échec de la connexion</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+          }
+        } catch (error) {
+          resultDiv.className = "test-section error";
+          resultDiv.innerHTML = `
+                    <h4>Erreur:</h4>
+                    <pre>${error.message}</pre>
+                `;
+        }
+      }
+
+      // Auto-check storage on load
+      window.onload = function () {
+        checkStorage();
+      };
+    </script>
+  </body>
+</html>
