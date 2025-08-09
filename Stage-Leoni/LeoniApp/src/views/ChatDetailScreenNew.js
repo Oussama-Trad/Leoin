@@ -15,9 +15,23 @@ import { Ionicons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 export default function ChatDetailScreen({ route, navigation }) {
-  const { chat } = route.params;
+  const { chat } = route.params || {};
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+
+  // Add null check for chat object and provide default values
+  if (!chat) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Chat not found</Text>
+      </View>
+    );
+  }
+
+  // Default values for missing chat properties
+  const chatColor = chat.color || '#002857'; // Default blue color
+  const chatIcon = chat.icon || 'chatbubble-outline'; // Default chat icon
+  const chatName = chat.name || chat.subject || chat.targetDepartment || 'Conversation';
 
   useEffect(() => {
     // Simuler des messages
@@ -85,7 +99,7 @@ export default function ChatDetailScreen({ route, navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={[styles.header, { backgroundColor: chat.color }]}>
+      <View style={[styles.header, { backgroundColor: chatColor }]}>
         <TouchableOpacity 
           style={styles.backButton} 
           onPress={() => navigation.goBack()}
@@ -95,10 +109,10 @@ export default function ChatDetailScreen({ route, navigation }) {
         
         <View style={styles.headerInfo}>
           <View style={styles.serviceIcon}>
-            <Ionicons name={chat.icon} size={24} color="#ffffff" />
+            <Ionicons name={chatIcon} size={24} color="#ffffff" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>{chat.name}</Text>
+            <Text style={styles.headerTitle}>{chatName}</Text>
             <Text style={styles.headerSubtitle}>En ligne</Text>
           </View>
         </View>
@@ -124,7 +138,7 @@ export default function ChatDetailScreen({ route, navigation }) {
             multiline
           />
           <TouchableOpacity 
-            style={[styles.sendButton, { backgroundColor: chat.color }]}
+            style={[styles.sendButton, { backgroundColor: chatColor }]}
             onPress={sendMessage}
             disabled={!newMessage.trim()}
           >
@@ -260,5 +274,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 10,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#e53e3e',
+    textAlign: 'center',
+    marginTop: 50,
   },
 });

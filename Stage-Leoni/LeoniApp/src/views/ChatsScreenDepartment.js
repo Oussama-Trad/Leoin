@@ -203,9 +203,10 @@ const ChatsScreenDepartment = ({ navigation }) => {
       }
 
       console.log('🚀 Création du chat avec le département:', selectedDepartment.name);
+      // Création de la conversation avec les bons paramètres
       const response = await chatAPI.createChatWithDepartment(
-        selectedDepartment.name,
-        selectedDepartment.location || userProfile.location, // Utiliser la location du département ou celle de l'utilisateur
+        selectedDepartment.name,  // Le nom du département sera passé comme "department"
+        selectedDepartment.location || userProfile.location,
         chatSubject.trim(),
         'normal'
       );

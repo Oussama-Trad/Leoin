@@ -391,9 +391,9 @@ def create_chat_with_department(current_user_id, current_user_email):
             # Création du message initial si fourni
             if initial_message:
                 message_data = {
-                    'chatRef': conversation_id,  # Changed from chatId to chatRef
-                    'message': initial_message,  # Primary field as per schema
-                    'content': initial_message,  # Keep for compatibility
+                    'chatId': conversation_id,
+                    'content': initial_message,
+                    'message': initial_message,
                     'subject': subject,
                     'senderId': ObjectId(current_user_id),
                     'senderName': user_name,
@@ -485,13 +485,13 @@ def get_user_chats_mobile(current_user_id, current_user_email):
         for conv in conversations:
             # Récupérer le dernier message
             last_message = chat_messages_collection.find_one(
-                {'chatRef': conv['_id']}, 
+                {'chatId': conv['_id']}, 
                 sort=[('createdAt', -1)]
             )
             
             # Compter les messages non lus (messages d'admin non lus par l'utilisateur)
             unread_count = chat_messages_collection.count_documents({
-                'chatRef': conv['_id'],
+                'chatId': conv['_id'],
                 'senderRole': 'admin',
                 'isRead': False
             })
@@ -506,11 +506,7 @@ def get_user_chats_mobile(current_user_id, current_user_email):
                 'createdAt': conv.get('createdAt').isoformat() if conv.get('createdAt') else None,
                 'lastActivityAt': conv.get('lastActivityAt').isoformat() if conv.get('lastActivityAt') else None,
                 'messageCount': conv.get('messageCount', 0),
-                'unreadCount': unread_count,
-                # Frontend compatibility properties
-                'name': f"Chat - {conv.get('targetDepartment', 'Service')}",
-                'color': '#002857',  # Default blue color
-                'icon': 'chatbubble-outline'  # Default chat icon
+                'unreadCount': unread_count
             }
             
             # Ajouter le dernier message s'il existe
@@ -664,7 +660,7 @@ def get_conversation_messages(current_user_id, current_user_email, conversation_
         
         # Récupérer les messages
         messages = list(chat_messages_collection.find({
-            'chatRef': ObjectId(conversation_id)  # Changed from chatId to chatRef
+            'chatId': ObjectId(conversation_id)
         }).sort('createdAt', 1))
         
         messages_list = []
@@ -716,9 +712,9 @@ def send_message(current_user_id, current_user_email, conversation_id):
         
         # Créer le message
         message_data = {
-            'chatRef': ObjectId(conversation_id),  # Changed from chatId to chatRef
-            'message': data['content'].strip(),  # Primary field as per schema
-            'content': data['content'].strip(),  # Keep for compatibility
+            'chatId': ObjectId(conversation_id),
+            'content': data['content'].strip(),
+            'message': data['content'].strip(),
             'senderId': ObjectId(current_user_id),
             'senderName': user.get('firstName', '') + ' ' + user.get('lastName', ''),
             'senderRole': 'employee',
@@ -805,7 +801,7 @@ def get_admin_conversations():
         for conv in conversations:
             # Récupérer le dernier message
             last_message = chat_messages_collection.find_one(
-                {'chatRef': conv['_id']}, 
+                {'chatId': conv['_id']}, 
                 sort=[('createdAt', -1)]
             )
             
@@ -938,9 +934,9 @@ def admin_reply_to_conversation(conversation_id):
         
         # Créer le message de réponse
         message_data = {
-            'chatRef': ObjectId(conversation_id),  # Changed from chatId to chatRef
-            'message': data['content'].strip(),  # Primary field as per schema
-            'content': data['content'].strip(),  # Keep for compatibility
+            'chatId': ObjectId(conversation_id),
+            'content': data['content'].strip(),
+            'message': data['content'].strip(),
             'senderId': ObjectId(admin['_id']),
             'senderName': admin.get('username', 'Admin'),
             'senderRole': 'admin',
@@ -1088,7 +1084,7 @@ try:
     chats_collection.create_index([("status", 1)])
     
     # Index pour les messages
-    chat_messages_collection.create_index([("chatRef", 1), ("createdAt", 1)])
+    chat_messages_collection.create_index([("chatId", 1), ("createdAt", 1)])
     chat_messages_collection.create_index([("senderId", 1)])
     
     print("✅ Index Chat créés avec succès")

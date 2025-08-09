@@ -204,9 +204,9 @@ export const chatAPI = {
     return await fetchFromAPI('/api/chats/department', {
       method: 'POST',
       body: JSON.stringify({
-        targetDepartment,
-        targetLocation,
-        subject,
+        department: targetDepartment,
+        location: targetLocation,
+        initialMessage: subject,
         priority
       })
     });
