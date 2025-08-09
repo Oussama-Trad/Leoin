@@ -20,7 +20,6 @@ public class AuthResponse {
     private String userId; // ID of the admin or superadmin
     private String location; // For admin users
     private String department; // For admin users
-    private String flaskToken; // Token Flask pour l'intégration API
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date loginTime;

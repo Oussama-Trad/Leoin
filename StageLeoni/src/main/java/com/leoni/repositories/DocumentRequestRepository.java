@@ -93,4 +93,28 @@ public interface DocumentRequestRepository extends MongoRepository<DocumentReque
      */
     @Query("{'description': {$regex: ?0, $options: 'i'}}")
     List<DocumentRequest> searchByDescription(String searchTerm);
+    
+    /**
+     * Find document requests by status (using current status)
+     * @param status the status to search for
+     * @return List of document requests with the specified status
+     */
+    @Query("{'status.current': ?0}")
+    List<DocumentRequest> findByStatus(String status);
+    
+    /**
+     * Find document requests by user IDs and status
+     * @param userIds list of user IDs
+     * @param status the status to search for
+     * @return List of matching document requests
+     */
+    @Query("{'userId': {$in: ?0}, 'status.current': ?1}")
+    List<DocumentRequest> findByUserIdInAndStatus(List<String> userIds, String status);
+    
+    /**
+     * Find document requests by user IDs
+     * @param userIds list of user IDs
+     * @return List of matching document requests
+     */
+    List<DocumentRequest> findByUserIdIn(List<String> userIds);
 }

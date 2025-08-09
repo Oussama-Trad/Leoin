@@ -4,14 +4,12 @@ import com.leoni.dto.AuthRequest;
 import com.leoni.dto.AuthResponse;
 import com.leoni.models.Admin;
 import com.leoni.models.SuperAdmin;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class AuthService {
@@ -22,18 +20,12 @@ public class AuthService {
     @Autowired
     private SuperAdminService superAdminService;
     
-    @Autowired
-    private FlaskApiService flaskApiService;
-    
     // Simple hardcoded admin credentials as fallback
     private static final String ADMIN_USERNAME = "admin";
     private static final String ADMIN_PASSWORD = "admin";
     
-    // Clé secrète pour décoder les tokens JWT (doit être la même que Flask)
-    private final String SECRET_KEY = "your-secret-key-must-be-at-least-32-characters-long-for-hs256";
-    
     /**
-     * Authenticate user via Flask API first, then fallback to local auth
+     * Authenticate user (admin or superadmin)
      * @param authRequest the authentication request
      * @return AuthResponse with authentication result and role information
      */
@@ -45,27 +37,6 @@ public class AuthService {
         String username = authRequest.getUsername();
         String password = authRequest.getPassword();
         
-        // PRIORITÉ 1: Authentification via Flask API (backend commun)
-        try {
-            String flaskToken = flaskApiService.authenticateAdmin(username, password);
-            if (flaskToken != null) {
-                Admin admin = decodeAdminFromToken(flaskToken);
-                if (admin != null) {
-                    AuthResponse response = AuthResponse.success(flaskToken, username);
-                    response.setRole(admin.getRole());
-                    response.setUserId(admin.getUsername());
-                    response.setLocation(admin.getLocation());
-                    response.setDepartment(admin.getDepartment());
-                    response.setFlaskToken(flaskToken); // Stocker le token Flask
-                    return response;
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Erreur authentification Flask: " + e.getMessage());
-            // Continue avec l'authentification locale en fallback
-        }
-        
-        // PRIORITÉ 2: Authentification locale (fallback)
         // First, try to authenticate as SuperAdmin
         Optional<SuperAdmin> superAdmin = superAdminService.authenticate(username, password);
         if (superAdmin.isPresent()) {
@@ -101,115 +72,23 @@ public class AuthService {
     }
     
     /**
-     * Décoder un token JWT Flask pour extraire les informations admin
-     * @param token token JWT
-     * @return Admin object ou null si erreur
-     */
-    public Admin decodeAdminFromToken(String token) {
-        try {
-            Claims claims = Jwts.parser()
-                .setSigningKey(SECRET_KEY.getBytes())
-                .parseClaimsJws(token)
-                .getBody();
-
-            Admin admin = new Admin();
-            admin.setUsername(claims.get("username", String.class));
-            admin.setRole(claims.get("role", String.class));
-            admin.setDepartment(claims.get("department", String.class));
-            admin.setLocation(claims.get("location", String.class));
-            // Note: Admin model n'a pas de champ email, on ignore
-            // admin.setEmail(claims.get("email", String.class));
-
-            return admin;
-        } catch (Exception e) {
-            System.err.println("Erreur décodage token Flask: " + e.getMessage());
-            return null;
-        }
-    }
-    
-    /**
-     * Vérifier si un admin peut accéder à des données d'un département/location
-     * @param admin admin qui fait la requête
-     * @param targetDepartment département cible
-     * @param targetLocation location cible
-     * @return true si autorisé, false sinon
-     */
-    public boolean canAccessDepartmentLocation(Admin admin, String targetDepartment, String targetLocation) {
-        if (admin == null) {
-            return false;
-        }
-
-        // SUPERADMIN a accès à tout
-        if ("SUPERADMIN".equals(admin.getRole())) {
-            return true;
-        }
-
-        // ADMIN ne peut accéder qu'à son département et sa location
-        if ("ADMIN".equals(admin.getRole())) {
-            boolean departmentMatch = admin.getDepartment() != null && 
-                                    admin.getDepartment().equals(targetDepartment);
-            boolean locationMatch = admin.getLocation() != null && 
-                                  admin.getLocation().equals(targetLocation);
-            
-            return departmentMatch && locationMatch;
-        }
-
-        return false;
-    }
-    
-    /**
-     * Obtenir les paramètres de filtrage pour un admin
-     * @param admin admin connecté
-     * @return map avec department et location pour le filtrage
-     */
-    public Map<String, String> getFilteringParams(Admin admin) {
-        if (admin == null) {
-            return Map.of();
-        }
-
-        // SUPERADMIN : pas de filtrage automatique
-        if ("SUPERADMIN".equals(admin.getRole())) {
-            return Map.of("role", "SUPERADMIN");
-        }
-
-        // ADMIN : filtrage par son département et location
-        if ("ADMIN".equals(admin.getRole())) {
-            return Map.of(
-                "role", "ADMIN",
-                "department", admin.getDepartment() != null ? admin.getDepartment() : "",
-                "location", admin.getLocation() != null ? admin.getLocation() : ""
-            );
-        }
-
-        return Map.of();
-    }
-    
-    /**
-     * Validate authentication token (Flask JWT ou token local)
+     * Validate authentication token
      * @param token the token to validate
      * @return true if token is valid
      */
     public boolean validateToken(String token) {
+        // Simple token validation (in production, implement proper JWT validation)
         if (token == null) {
             return false;
         }
         
-        // Vérifier si c'est un token JWT Flask
-        try {
-            Jwts.parser()
-                .setSigningKey(SECRET_KEY.getBytes())
-                .parseClaimsJws(token);
-            return true;
-        } catch (Exception e) {
-            // Pas un token JWT valide, continuer avec la validation locale
-        }
-        
-        // Validation des tokens locaux
+        // Check if it's a proper token format
         if (token.startsWith("admin-token-") || token.startsWith("superadmin-token-")) {
             return true;
         }
         
         // Backward compatibility - accept "authenticated" as a valid token for now
+        // This should be removed in production
         if ("authenticated".equals(token)) {
             return true;
         }
@@ -344,5 +223,40 @@ public class AuthService {
      */
     public String getAdminUsername() {
         return ADMIN_USERNAME;
+    }
+    
+    /**
+     * Get the authenticated admin ID from the current context
+     * This method should be used to get the current admin's ID from security context
+     * @return the authenticated admin's ID, or null if not authenticated
+     */
+    public String getAuthenticatedAdminId() {
+        // For now, we'll return a fallback admin ID
+        // In a real implementation, this would extract from SecurityContext or JWT token
+        return "fallback-admin";
+    }
+
+    /**
+     * Extract authenticated admin ID from the HTTP request Authorization header.
+     * Supports Bearer tokens generated by this service. Returns null if missing/invalid.
+     */
+    public String getAuthenticatedAdminId(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authHeader.substring(7);
+        if (!validateToken(token)) {
+            return null;
+        }
+        String userId = getUserIdFromToken(token);
+        // Fallback for legacy "authenticated" token without embedded user id
+        if (userId == null && "authenticated".equals(token)) {
+            return "fallback-admin";
+        }
+        return userId;
     }
 }

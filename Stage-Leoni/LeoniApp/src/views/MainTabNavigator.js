@@ -7,7 +7,7 @@ import ProfileScreen from './ProfileScreen';
 import DocumentRequestScreen from './DocumentRequestScreen';
 import DocumentsScreen from './DocumentsScreen';
 import NewsScreenNew from './NewsScreenNew';
-import ChatsScreenNew from './ChatsScreenNew';
+import ChatsScreenDepartment from './ChatsScreenDepartment';
 
 const Tab = createBottomTabNavigator();
 
@@ -85,7 +85,7 @@ const MainTabNavigator = ({ route }) => {
         />
         <Tab.Screen 
           name="Chats" 
-          component={ChatsScreenNew}
+          component={ChatsScreenDepartment}
           options={{
             title: 'Conversations',
           }}

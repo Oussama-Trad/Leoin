@@ -2,16 +2,9 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Liste des IPs possibles à tester
+// Liste des IPs possibles à tester (localhost uniquement)
 const POSSIBLE_IPS = [
   'localhost',
-  '192.168.1.16',
-  '192.168.1.15',
-  '192.168.1.17',
-  '192.168.1.18',
-  '192.168.1.19',
-  '192.168.1.20',
-  '10.0.2.2', // IP par défaut pour l'émulateur Android
   '127.0.0.1'
 ];
 
@@ -66,16 +59,8 @@ const detectPCIP = () => {
 
 // Détection automatique de l'environnement
 const getBaseURL = () => {
-  // Essayer de détecter automatiquement l'IP
-  const detectedIP = detectPCIP();
-
-  if (detectedIP) {
-    console.log('✅ CONFIG: IP détectée automatiquement:', detectedIP);
-    return `http://${detectedIP}:5000`;
-  }
-
-  // Fallback : utiliser localhost par défaut
-  console.log('🔍 CONFIG: Utilisation de localhost par défaut');
+  // Toujours utiliser localhost
+  console.log('✅ CONFIG: Utilisation de localhost par défaut');
   return 'http://localhost:5000';
 };
 
@@ -83,49 +68,27 @@ export const BASE_URL = 'http://localhost:5000';
 
 // Fonction pour trouver automatiquement la bonne IP
 export const findWorkingIP = async () => {
-  console.log('🔍 CONFIG: Recherche de l\'IP du serveur...');
+  console.log('🔍 CONFIG: Test de connectivité localhost...');
 
-  // D'abord, essayer l'IP détectée automatiquement
-  const detectedIP = detectPCIP();
-  if (detectedIP) {
-    console.log(`🔍 CONFIG: Test de l'IP détectée: ${detectedIP}...`);
-    const works = await testConnection(detectedIP);
-    if (works) {
-      console.log(`✅ CONFIG: Serveur trouvé sur l'IP détectée: ${detectedIP}`);
-      // Sauvegarder cette IP pour les prochaines fois
-      await AsyncStorage.setItem('lastWorkingIP', detectedIP);
-      return `http://${detectedIP}:5000`;
-    }
+  // Tester localhost en premier
+  console.log(`🔍 CONFIG: Test de localhost...`);
+  const works = await testConnection('localhost');
+  if (works) {
+    console.log(`✅ CONFIG: Serveur trouvé sur localhost`);
+    await AsyncStorage.setItem('lastWorkingIP', 'localhost');
+    return 'http://localhost:5000';
   }
 
-  // Essayer la dernière IP qui a fonctionné
-  try {
-    const lastWorkingIP = await AsyncStorage.getItem('lastWorkingIP');
-    if (lastWorkingIP) {
-      console.log(`🔍 CONFIG: Test de la dernière IP qui a fonctionné: ${lastWorkingIP}...`);
-      const works = await testConnection(lastWorkingIP);
-      if (works) {
-        console.log(`✅ CONFIG: Serveur trouvé sur la dernière IP: ${lastWorkingIP}`);
-        return `http://${lastWorkingIP}:5000`;
-      }
-    }
-  } catch (error) {
-    console.log('🔍 CONFIG: Impossible de récupérer la dernière IP');
+  // Tester 127.0.0.1 en backup
+  console.log(`🔍 CONFIG: Test de 127.0.0.1...`);
+  const works2 = await testConnection('127.0.0.1');
+  if (works2) {
+    console.log(`✅ CONFIG: Serveur trouvé sur 127.0.0.1`);
+    await AsyncStorage.setItem('lastWorkingIP', '127.0.0.1');
+    return 'http://127.0.0.1:5000';
   }
 
-  // Fallback : tester la liste des IPs possibles
-  for (const ip of POSSIBLE_IPS) {
-    console.log(`🔍 CONFIG: Test de ${ip}...`);
-    const works = await testConnection(ip);
-    if (works) {
-      console.log(`✅ CONFIG: Serveur trouvé sur ${ip}`);
-      // Sauvegarder cette IP pour les prochaines fois
-      await AsyncStorage.setItem('lastWorkingIP', ip);
-      return `http://${ip}:5000`;
-    }
-  }
-
-  console.log('❌ CONFIG: Aucun serveur trouvé');
+  console.log('❌ CONFIG: Aucun serveur trouvé sur localhost');
   return null;
 };
 

@@ -69,6 +69,11 @@ public class EmployeeController {
             if (location != null && !location.isEmpty()) {
                 urlBuilder.append("&location=").append(location);
             }
+            // Passer le username admin pour un filtrage côté Python (si disponible)
+            String usernameFromToken = authService.getUsernameFromToken(authHeader.replace("Bearer ", ""));
+            if (usernameFromToken != null && !usernameFromToken.isEmpty()) {
+                urlBuilder.append("&admin_username=").append(usernameFromToken);
+            }
             
             String url = urlBuilder.toString();
             System.out.println("Calling Python backend: " + url);
@@ -213,7 +218,20 @@ public class EmployeeController {
                 return ResponseEntity.status(401).body(Map.of("success", false, "message", "Token invalide"));
             }
             
-            String url = PYTHON_BACKEND_URL + "/api/admin/document-requests/filtered";
+            // Aligner avec les routes Python existantes: /api/admin/documents/requests
+            StringBuilder urlBuilder = new StringBuilder(PYTHON_BACKEND_URL + "/api/admin/documents/requests");
+            urlBuilder.append("?admin_role=").append(role);
+            if (department != null && !department.isEmpty()) {
+                urlBuilder.append("&department=").append(department);
+            }
+            if (location != null && !location.isEmpty()) {
+                urlBuilder.append("&location=").append(location);
+            }
+            String usernameFromToken = authService.getUsernameFromToken(authHeader.replace("Bearer ", ""));
+            if (usernameFromToken != null && !usernameFromToken.isEmpty()) {
+                urlBuilder.append("&admin_username=").append(usernameFromToken);
+            }
+            String url = urlBuilder.toString();
             
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", authHeader);
@@ -254,13 +272,23 @@ public class EmployeeController {
                 return ResponseEntity.status(401).body(Map.of("success", false, "message", "Token invalide"));
             }
             
-            String url = PYTHON_BACKEND_URL + "/api/admin/document-requests/update-status";
-            
+            // Aligner avec les routes Python: /api/admin/documents/request/<id>/process
+            String requestId = updateRequest.getOrDefault("requestId", "");
+            String url = PYTHON_BACKEND_URL + "/api/admin/documents/request/" + requestId + "/process";
+
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", authHeader);
             headers.set("Content-Type", "application/json");
             
-            HttpEntity<Map<String, String>> entity = new HttpEntity<>(updateRequest, headers);
+            // Construire le payload attendu côté Python
+            Map<String, String> payload = new java.util.HashMap<>(updateRequest);
+            String usernameFromToken2 = authService.getUsernameFromToken(authHeader.replace("Bearer ", ""));
+            if (usernameFromToken2 != null && !usernameFromToken2.isEmpty()) {
+                payload.put("admin_username", usernameFromToken2);
+            }
+            // Déterminer le rôle à partir du token
+            String adminRole = authService.getRoleFromToken(token);
+            payload.putIfAbsent("admin_role", adminRole != null ? adminRole : "ADMIN");            HttpEntity<Map<String, String>> entity = new HttpEntity<>(payload, headers);
             
             ResponseEntity<Map> response = restTemplate.exchange(
                 url,

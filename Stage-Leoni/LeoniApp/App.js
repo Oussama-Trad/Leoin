@@ -13,7 +13,7 @@ import MainNavigator from './src/views/MainNavigator';
 import NewsDetailScreenNew from './src/views/NewsDetailScreenNew';
 import ChatDetailScreenNew from './src/views/ChatDetailScreenNew';
 import DocumentRequestScreen from './src/views/DocumentRequestScreen';
-import ChatsScreenNew from './src/views/ChatsScreenNew';
+import ChatsScreenDepartment from './src/views/ChatsScreenDepartment';
 
 const Stack = createStackNavigator();
 
@@ -88,7 +88,7 @@ export default function App() {
         />
         <Stack.Screen
           name="ChatsStack"
-          component={ChatsScreenNew}
+          component={ChatsScreenDepartment}
           options={{
             headerShown: false
           }}

@@ -15,7 +15,7 @@ import ProfileScreenSimple from './ProfileScreenSimple';
 import DocumentsScreen from './DocumentsScreen';
 import NewsScreenNew from './NewsScreenNew';
 import DocumentRequestScreen from './DocumentRequestScreen';
-import ChatsScreenNew from './ChatsScreenNew';
+import ChatsScreenDepartment from './ChatsScreenDepartment';
 // Écrans de test temporaires
 import TestDocumentRequestScreen from './TestDocumentRequestScreen';
 import TestChatsScreen from './TestChatsScreen';
@@ -332,7 +332,7 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen 
         name="Chats" 
-        component={ChatsScreenNew}
+        component={ChatsScreenDepartment}
         options={{
           title: 'Chat avec service',
           tabBarButton: () => null, // Cache ce tab de la bottom navigation

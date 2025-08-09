@@ -16,6 +16,8 @@ public class Admin {
     
     private String password;
     
+    private String email; // Email field for admin
+    
     private String departmentId;
     
     // Add location and department fields for direct string comparison
@@ -66,6 +68,14 @@ public class Admin {
     
     public void setPassword(String password) {
         this.password = password;
+    }
+    
+    public String getEmail() {
+        return email;
+    }
+    
+    public void setEmail(String email) {
+        this.email = email;
     }
     
     public String getDepartmentId() {

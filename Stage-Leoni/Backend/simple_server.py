@@ -5,15 +5,10 @@ from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
-import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 app = Flask(__name__)
 
-# CORS Configuration - Allow all origins for mobile app
+# CORS ULTRA SIMPLE - ACCEPTE TOUT + HEADERS EXPLICITES
 CORS(app, 
      origins="*", 
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], 
@@ -21,29 +16,22 @@ CORS(app,
      expose_headers=["*"],
      supports_credentials=True)
 
-# MongoDB Configuration
-MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb+srv://oussamatrzd19:oussama123@leoniapp.grhnzgz.mongodb.net/LeoniApp')
-JWT_SECRET = os.getenv('JWT_SECRET', '123')
+# MongoDB simple
+MONGODB_URI = 'mongodb+srv://oussamatrzd19:oussama123@leoniapp.grhnzgz.mongodb.net/LeoniApp'
+JWT_SECRET = '123'
 
 try:
     client = MongoClient(MONGODB_URI)
     db = client.LeoniApp
     users_collection = db.users
-    chats_collection = db.chats
-    documents_collection = db.documents
-    news_collection = db.news
-    print("✅ MongoDB connected successfully")
+    print("✅ MongoDB connecté")
 except Exception as e:
-    print(f"❌ MongoDB connection error: {e}")
+    print(f"❌ MongoDB error: {e}")
 
-# Health check endpoint
 @app.route('/health', methods=['GET', 'OPTIONS'])
 def health():
-    if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'}), 200
     return jsonify({'status': 'OK', 'message': 'Server running'}), 200
 
-# Authentication Routes
 @app.route('/login', methods=['POST', 'OPTIONS'])
 def login():
     print(f"🔥 LOGIN REQUEST - Method: {request.method}")
@@ -67,16 +55,17 @@ def login():
         if not email or not password:
             return jsonify({'success': False, 'message': 'Email et mot de passe requis'}), 400
         
-        # Find user by adresse1 field (primary) or email field (fallback)
+        # Chercher l'utilisateur
         user = users_collection.find_one({'adresse1': email})
         if not user:
+            # Essayer avec le champ email pour compatibility
             user = users_collection.find_one({'email': email})
         
         if not user:
             print(f"❌ User not found: {email}")
             return jsonify({'success': False, 'message': 'Identifiants incorrects'}), 401
         
-        # Check password
+        # Vérifier le mot de passe
         stored_password = user.get('password', b'')
         if isinstance(stored_password, str):
             stored_password = stored_password.encode('utf-8')
@@ -85,7 +74,7 @@ def login():
             print(f"❌ Wrong password for: {email}")
             return jsonify({'success': False, 'message': 'Identifiants incorrects'}), 401
         
-        # Create JWT token
+        # Créer le token JWT
         token = jwt.encode({
             'user_id': str(user['_id']),
             'email': user.get('adresse1', user.get('email', email)),
@@ -123,10 +112,10 @@ def register():
     try:
         data = request.get_json()
         
-        # Required fields
+        # Champs requis de base
         required_fields = ['firstName', 'lastName', 'email', 'password', 'department', 'location']
         
-        # Check for missing fields
+        # Vérifier que tous les champs requis sont présents
         missing_fields = [field for field in required_fields if field not in data or not data[field].strip()]
         if missing_fields:
             return jsonify({
@@ -136,23 +125,22 @@ def register():
 
         email = data['email'].strip().lower()
         
-        # Check if user already exists
-        if users_collection.find_one({"adresse1": email}) or users_collection.find_one({"email": email}):
+        # Vérifier si l'utilisateur existe déjà
+        if users_collection.find_one({"email": email}):
             return jsonify({'success': False, 'message': 'Un utilisateur avec cet email existe déjà'}), 400
         
-        # Hash password
+        # Hasher le mot de passe
         hashed_password = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
         
-        # Create user
+        # Créer l'utilisateur
         user_data = {
             'firstName': data['firstName'].strip(),
             'lastName': data['lastName'].strip(),
             'email': email,
-            'adresse1': email,  # Use adresse1 as primary email field
             'password': hashed_password,
             'department': data['department'].strip(),
             'location': data['location'].strip(),
-            'approved': False,  # Pending approval
+            'approved': False,  # En attente d'approbation
             'createdAt': datetime.utcnow(),
             'phoneNumber': data.get('phoneNumber', '').strip(),
             'employeeId': data.get('employeeId', '').strip()
@@ -172,12 +160,13 @@ def register():
         print(f"💥 REGISTER ERROR: {e}")
         return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
 
-# User profile endpoint
 @app.route('/me', methods=['GET', 'OPTIONS'])
 def get_me():
     print(f"🔥 ME REQUEST - Method: {request.method}")
+    print(f"🔥 Origin: {request.headers.get('Origin')}")
     
     if request.method == 'OPTIONS':
+        print("🔥 Handling ME OPTIONS preflight")
         return jsonify({'status': 'ok'}), 200
     
     try:
@@ -214,6 +203,7 @@ def get_me():
             'employeeId': user.get('employeeId', '')
         }
         
+        print(f"✅ ME SUCCESS: {user.get('adresse1', user.get('email', ''))}")
         return jsonify({
             'success': True,
             'user': user_data
@@ -223,22 +213,24 @@ def get_me():
         print(f"💥 ME ERROR: {e}")
         return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
 
-# Chat Routes
-@app.route('/api/chats/department', methods=['POST', 'OPTIONS'])
-def create_chat_with_department():
-    print(f"🔥 CREATE CHAT WITH DEPARTMENT - Method: {request.method}")
+@app.route('/document-requests', methods=['GET', 'OPTIONS'])
+def get_document_requests():
+    print(f"🔥 DOCUMENT-REQUESTS REQUEST - Method: {request.method}")
+    print(f"🔥 Origin: {request.headers.get('Origin')}")
     
     if request.method == 'OPTIONS':
+        print("🔥 Handling DOCUMENT-REQUESTS OPTIONS preflight")
         return jsonify({'status': 'ok'}), 200
     
     try:
-        # Get token and validate user
+        # Get token from Authorization header
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
             return jsonify({'success': False, 'message': 'Token manquant'}), 401
         
         token = auth_header.split(' ')[1]
         
+        # Decode JWT token
         try:
             decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
             user_id = decoded['user_id']
@@ -247,7 +239,45 @@ def create_chat_with_department():
         except jwt.InvalidTokenError:
             return jsonify({'success': False, 'message': 'Token invalide'}), 401
         
-        # Get user
+        # For now, return empty documents list since we don't have document management in simple server
+        print(f"✅ DOCUMENT-REQUESTS SUCCESS for user: {user_id}")
+        return jsonify({
+            'success': True,
+            'documents': [],
+            'message': 'Aucun document trouvé'
+        })
+        
+    except Exception as e:
+        print(f"💥 DOCUMENT-REQUESTS ERROR: {e}")
+        return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
+
+@app.route('/api/chats/department', methods=['POST', 'OPTIONS'])
+def create_chat_with_department():
+    print(f"🔥 CREATE CHAT WITH DEPARTMENT REQUEST - Method: {request.method}")
+    print(f"🔥 Origin: {request.headers.get('Origin')}")
+    
+    if request.method == 'OPTIONS':
+        print("🔥 Handling CHAT OPTIONS preflight")
+        return jsonify({'status': 'ok'}), 200
+    
+    try:
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'message': 'Token manquant'}), 401
+        
+        token = auth_header.split(' ')[1]
+        
+        # Decode JWT token
+        try:
+            decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+            user_id = decoded['user_id']
+        except jwt.ExpiredSignatureError:
+            return jsonify({'success': False, 'message': 'Token expiré'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'success': False, 'message': 'Token invalide'}), 401
+        
+        # Get user from database
         user = users_collection.find_one({'_id': ObjectId(user_id)})
         if not user:
             return jsonify({'success': False, 'message': 'Utilisateur introuvable'}), 404
@@ -256,37 +286,31 @@ def create_chat_with_department():
         department = data.get('department', '')
         initial_message = data.get('initialMessage', '')
         
-        # Create chat
+        print(f"🔥 Creating chat for department: {department}")
+        
+        # Create a simple chat response
         chat_data = {
+            '_id': str(ObjectId()),
             'department': department,
             'userId': user_id,
             'userName': f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
             'userEmail': user.get('adresse1', user.get('email', '')),
-            'status': 'pending',  # Use valid enum value
-            'participants': [user_id],  # Add required participants field
-            'createdAt': datetime.utcnow(),
+            'status': 'open',
+            'createdAt': datetime.utcnow().isoformat(),
             'messages': []
         }
         
         if initial_message:
             message_data = {
-                '_id': ObjectId(),
+                '_id': str(ObjectId()),
                 'text': initial_message,
                 'sender': 'user',
                 'senderName': chat_data['userName'],
-                'timestamp': datetime.utcnow()
+                'timestamp': datetime.utcnow().isoformat()
             }
             chat_data['messages'].append(message_data)
         
-        # Insert into database
-        result = chats_collection.insert_one(chat_data)
-        chat_data['_id'] = str(result.inserted_id)
-        
-        # Convert ObjectIds to strings for JSON response
-        for message in chat_data['messages']:
-            message['_id'] = str(message['_id'])
-        
-        print(f"✅ CHAT CREATED: {department}")
+        print(f"✅ CHAT CREATED SUCCESS for department: {department}")
         return jsonify({
             'success': True,
             'chat': chat_data,
@@ -299,19 +323,22 @@ def create_chat_with_department():
 
 @app.route('/api/chats', methods=['GET', 'OPTIONS'])
 def get_user_chats():
-    print(f"🔥 GET USER CHATS - Method: {request.method}")
+    print(f"🔥 GET USER CHATS REQUEST - Method: {request.method}")
+    print(f"🔥 Origin: {request.headers.get('Origin')}")
     
     if request.method == 'OPTIONS':
+        print("🔥 Handling GET CHATS OPTIONS preflight")
         return jsonify({'status': 'ok'}), 200
     
     try:
-        # Get token and validate user
+        # Get token from Authorization header
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
             return jsonify({'success': False, 'message': 'Token manquant'}), 401
         
         token = auth_header.split(' ')[1]
         
+        # Decode JWT token
         try:
             decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
             user_id = decoded['user_id']
@@ -320,154 +347,23 @@ def get_user_chats():
         except jwt.InvalidTokenError:
             return jsonify({'success': False, 'message': 'Token invalide'}), 401
         
-        # Get user's chats
-        chats = list(chats_collection.find({'userId': user_id}).sort('createdAt', -1))
-        
-        # Convert ObjectIds to strings
-        for chat in chats:
-            chat['_id'] = str(chat['_id'])
-            for message in chat.get('messages', []):
-                message['_id'] = str(message['_id'])
-        
+        # For now, return empty chats list
+        print(f"✅ GET CHATS SUCCESS for user: {user_id}")
         return jsonify({
             'success': True,
-            'chats': chats
+            'chats': [],
+            'message': 'Aucun chat trouvé'
         })
         
     except Exception as e:
         print(f"💥 GET CHATS ERROR: {e}")
         return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
 
-# Document Routes
-@app.route('/document-requests', methods=['GET', 'OPTIONS'])
-def get_document_requests():
-    print(f"🔥 DOCUMENT REQUESTS - Method: {request.method}")
-    
-    if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'}), 200
-    
-    try:
-        # Get token and validate user
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({'success': False, 'message': 'Token manquant'}), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        try:
-            decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-            user_id = decoded['user_id']
-        except jwt.ExpiredSignatureError:
-            return jsonify({'success': False, 'message': 'Token expiré'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'success': False, 'message': 'Token invalide'}), 401
-        
-        # Get user's document requests
-        documents = list(documents_collection.find({'userId': user_id}).sort('createdAt', -1))
-        
-        # Convert ObjectIds to strings
-        for doc in documents:
-            doc['_id'] = str(doc['_id'])
-        
-        return jsonify({
-            'success': True,
-            'documents': documents
-        })
-        
-    except Exception as e:
-        print(f"💥 DOCUMENT REQUESTS ERROR: {e}")
-        return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
-
-# Departments Routes
-@app.route('/api/departments', methods=['GET', 'OPTIONS'])
-def get_departments():
-    print(f"🔥 GET DEPARTMENTS - Method: {request.method}")
-    
-    if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'}), 200
-    
-    try:
-        # Get token and validate user
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({'success': False, 'message': 'Token manquant'}), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        try:
-            decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-            user_id = decoded['user_id']
-        except jwt.ExpiredSignatureError:
-            return jsonify({'success': False, 'message': 'Token expiré'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'success': False, 'message': 'Token invalide'}), 401
-        
-        # Return list of departments
-        departments = [
-            {"name": "IT Support", "description": "Support informatique"},
-            {"name": "Human Resources", "description": "Ressources humaines"},
-            {"name": "Finance", "description": "Service financier"},
-            {"name": "Production", "description": "Service production"},
-            {"name": "Quality", "description": "Contrôle qualité"},
-            {"name": "Maintenance", "description": "Maintenance technique"},
-            {"name": "Logistics", "description": "Logistique"},
-            {"name": "Sales", "description": "Service commercial"}
-        ]
-        
-        print(f"✅ DEPARTMENTS SUCCESS for user: {user_id}")
-        return jsonify({
-            'success': True,
-            'departments': departments
-        })
-        
-    except Exception as e:
-        print(f"💥 GET DEPARTMENTS ERROR: {e}")
-        return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
-
-# News Routes
-@app.route('/api/news', methods=['GET', 'OPTIONS'])
-def get_news():
-    print(f"🔥 GET NEWS - Method: {request.method}")
-    
-    if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'}), 200
-    
-    try:
-        # Get token and validate user
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({'success': False, 'message': 'Token manquant'}), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        try:
-            decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-            user_id = decoded['user_id']
-        except jwt.ExpiredSignatureError:
-            return jsonify({'success': False, 'message': 'Token expiré'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'success': False, 'message': 'Token invalide'}), 401
-        
-        # Get latest news
-        news = list(news_collection.find({}).sort('createdAt', -1).limit(20))
-        
-        # Convert ObjectIds to strings
-        for article in news:
-            article['_id'] = str(article['_id'])
-        
-        return jsonify({
-            'success': True,
-            'news': news
-        })
-        
-    except Exception as e:
-        print(f"💥 GET NEWS ERROR: {e}")
-        return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
-
 if __name__ == '__main__':
-    print("🔥🔥🔥 LEONI APP BACKEND SERVER 🔥🔥🔥")
+    print("🔥🔥🔥 SERVEUR SIMPLE LOCALHOST ONLY 🔥🔥🔥")
     print("🔗 http://localhost:5000")
-    print("🔗 Health check: http://localhost:5000/health")
-    print("🔥🔥🔥 CORS ENABLED FOR ALL ORIGINS 🔥🔥🔥")
+    print("🔗 http://localhost:5000/health")
+    print("🔗 http://localhost:5000/login")
+    print("🔥🔥🔥 CORS = ACCEPTE TOUT 🔥🔥🔥")
     
     app.run(host='127.0.0.1', port=5000, debug=True)
