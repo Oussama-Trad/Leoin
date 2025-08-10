@@ -18,8 +18,12 @@ public class WelcomeController {
 
     @GetMapping("/login")
     public String login() {
-        // Redirect to home page since login is on the main page
-        return "redirect:/";
+        return "login";
+    }
+    
+    @GetMapping("/admin/login")
+    public String adminLogin() {
+        return "login";
     }
     
     /**

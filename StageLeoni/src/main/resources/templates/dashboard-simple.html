@@ -80,10 +80,10 @@
         </div>
         <nav>
             <ul class="nav-menu">
-                <li><a th:href="@{/dashboard(adminUsername=${adminUsername})}" class="active"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
-                <li><a th:href="@{/employees(adminUsername=${adminUsername})}"><i class="fas fa-users me-2"></i>Employés</a></li>
-                <li><a th:href="@{/news(adminUsername=${adminUsername})}"><i class="fas fa-newspaper me-2"></i>Actualités</a></li>
-                <li><a th:href="@{/conversations(adminUsername=${adminUsername})}"><i class="fas fa-comments me-2"></i>Conversations</a></li>
+                <li><a href="#dashboard" class="active"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                <li><a href="#employees"><i class="fas fa-users me-2"></i>Employés</a></li>
+                <li><a href="#news"><i class="fas fa-newspaper me-2"></i>Actualités</a></li>
+                <li><a href="#chat"><i class="fas fa-comments me-2"></i>Conversations</a></li>
             </ul>
         </nav>
     </div>
@@ -92,20 +92,9 @@
         <div class="header">
             <div class="d-flex justify-content-between align-items-center">
                 <h1>LEOIN Management</h1>
-                <div class="text-end">
-                    <div class="mb-1">
-                        <strong>Admin:</strong> <span th:text="${adminDisplayName ?: 'Utilisateur'}">Utilisateur</span>
-                        <span th:if="${isSuperAdmin}" class="badge bg-warning ms-2">SUPERADMIN</span>
-                        <span th:unless="${isSuperAdmin}" class="badge bg-info ms-2">ADMIN</span>
-                    </div>
-                    <div class="small text-muted" th:if="${!isSuperAdmin}">
-                        Département: <span th:text="${adminDepartment ?: 'N/A'}">N/A</span> | 
-                        Location: <span th:text="${adminLocation ?: 'N/A'}">N/A</span>
-                    </div>
-                    <div class="small text-muted" th:if="${isSuperAdmin}">
-                        Accès complet à toutes les données
-                    </div>
-                    <a href="/" class="btn btn-danger btn-sm mt-2">
+                <div>
+                    <span>Admin: <span th:text="${param.adminUsername ?: 'Utilisateur'}">Utilisateur</span></span>
+                    <a href="/" class="btn btn-danger ms-3">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
                 </div>
@@ -140,34 +129,6 @@
             </div>
         </div>
 
-        <!-- Employee Statistics -->
-        <div class="row">
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number" th:text="${totalEmployees ?: 0}">0</div>
-                    <div class="text-muted">👥 Total Employés</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number" th:text="${activeEmployees ?: 0}">0</div>
-                    <div class="text-muted">✅ Employés Actifs</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number" th:text="${pendingEmployees ?: 0}">0</div>
-                    <div class="text-muted">⏳ En Attente</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number" th:text="${totalEmployees - activeEmployees - pendingEmployees >= 0 ? totalEmployees - activeEmployees - pendingEmployees : 0}">0</div>
-                    <div class="text-muted">❌ Autres Status</div>
-                </div>
-            </div>
-        </div>
-
         <!-- Department Statistics -->
         <div class="row" th:if="${departmentStats != null and !departmentStats.isEmpty()}">
             <div class="col-12">
@@ -194,13 +155,13 @@
                         <div class="list-group-item" th:each="conv, iterStat : ${conversations}" th:if="${iterStat.index < 5}">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h5 th:text="${conv['subject'] ?: 'Sujet non défini'}">Sujet non défini</h5>
+                                    <h5 th:text="${conv.subject ?: 'Sujet non défini'}">Sujet non défini</h5>
                                     <p class="mb-1">
-                                        <strong>Département:</strong> <span th:text="${conv['targetDepartment'] ?: conv['department'] ?: 'N/A'}">N/A</span> |
-                                        <strong>Location:</strong> <span th:text="${conv['targetLocation'] ?: conv['location'] ?: 'N/A'}">N/A</span>
+                                        <strong>Département:</strong> <span th:text="${conv.targetDepartment ?: conv.department ?: 'N/A'}">N/A</span> |
+                                        <strong>Location:</strong> <span th:text="${conv.targetLocation ?: conv.location ?: 'N/A'}">N/A</span>
                                     </p>
                                 </div>
-                                <span class="badge bg-primary" th:text="${conv['status'] ?: 'pending'}">pending</span>
+                                <span class="badge bg-primary" th:text="${conv.status ?: 'pending'}">pending</span>
                             </div>
                         </div>
                     </div>
@@ -239,8 +200,8 @@
                     <p><strong>Titre:</strong> <span th:text="${title ?: 'Non défini'}">Non défini</span></p>
                     <p><strong>Message:</strong> <span th:text="${message ?: 'Non défini'}">Non défini</span></p>
                     <p><strong>Erreur:</strong> <span th:text="${error ?: 'Aucune'}" class="text-danger">Aucune</span></p>
-                    <p><strong>URL:</strong> <span>/dashboard</span></p>
-                    <p><strong>Paramètres:</strong> <span th:text="${adminUsername != null ? ('adminUsername=' + adminUsername) : 'Aucun'}">--</span></p>
+                    <p><strong>URL:</strong> <span th:text="${#httpServletRequest.requestURL}">--</span></p>
+                    <p><strong>Paramètres:</strong> <span th:text="${#httpServletRequest.queryString ?: 'Aucun'}">--</span></p>
                     <p><strong>Heure:</strong> <span th:text="${#dates.format(#dates.createNow(), 'dd/MM/yyyy HH:mm:ss')}">--</span></p>
                 </div>
             </div>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenue - Admin Leoni</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #1e3c72;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2a5298;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Bienvenue sur Leoni Admin</h1>
+        <p>L'application admin est maintenant opérationnelle ! Le problème de template a été résolu.</p>
+        
+        <div>
+            <a href="/login" class="btn">Se Connecter</a>
+            <a href="/dashboard" class="btn">Tableau de Bord</a>
+        </div>
+        
+        <div class="status">
+            <strong>Statut:</strong> ✅ Application démarrée avec succès<br>
+            <strong>Port:</strong> 9999<br>
+            <strong>Template:</strong> welcome.html<br>
+            <strong>Date:</strong> <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <script>
+        // Afficher la date actuelle
+        document.getElementById('currentDate').textContent = new Date().toLocaleString('fr-FR');
+        
+        // Vérifier si l'application est correctement chargée
+        console.log('🎉 Template welcome.html chargé avec succès!');
+        
+        // Fonction simple pour tester les interactions
+        function testConnection() {
+            alert('✅ Le JavaScript fonctionne correctement!');
+        }
+    </script>
+</body>
+</html>

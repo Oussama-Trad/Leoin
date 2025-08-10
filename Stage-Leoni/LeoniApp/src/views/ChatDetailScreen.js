@@ -14,7 +14,7 @@ import {
   Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { apiService } from '../controllers/apiService';
+import { chatAPI } from '../controllers/apiService';
 
 const ChatDetailScreen = ({ route, navigation }) => {
   const { chatId, chatData } = route.params;
@@ -66,19 +66,23 @@ const ChatDetailScreen = ({ route, navigation }) => {
   const loadMessages = async () => {
     try {
       setLoading(true);
-      const response = await apiService.get(`/api/chats/${chatId}/messages`);
+      console.log('🔍 ChatDetail: Chargement messages pour chatId:', chatId);
+      const response = await chatAPI.getChatMessages(chatId);
+      console.log('📥 ChatDetail: Réponse messages:', response);
+      
       if (response.success) {
-        setMessages(response.data);
+        setMessages(response.messages || []);
         
         // Scroll vers le bas après chargement
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({ animated: false });
         }, 100);
       } else {
-        Alert.alert('Erreur', 'Impossible de charger les messages');
+        console.error('❌ ChatDetail: Erreur API messages:', response.message);
+        Alert.alert('Erreur', response.message || 'Impossible de charger les messages');
       }
     } catch (error) {
-      console.error('Erreur chargement messages:', error);
+      console.error('💥 ChatDetail: Erreur chargement messages:', error);
       Alert.alert('Erreur', 'Problème de connexion');
     } finally {
       setLoading(false);
@@ -95,7 +99,8 @@ const ChatDetailScreen = ({ route, navigation }) => {
     // Ajouter le message localement pour l'affichage immédiat
     const tempMessage = {
       _id: `temp_${Date.now()}`,
-      message: { text: messageText, type: 'text' },
+      content: messageText,
+      message: messageText, // Compatibilité
       senderId: currentUserId,
       senderName: 'Vous',
       senderRole: 'employee',
@@ -107,15 +112,19 @@ const ChatDetailScreen = ({ route, navigation }) => {
     setMessages(prev => [...prev, tempMessage]);
 
     try {
-      const response = await apiService.post(`/api/chats/${chatId}/messages`, {
-        text: messageText
-      });
+      console.log('📤 ChatDetail: Envoi message:', { chatId, content: messageText });
+      const response = await chatAPI.sendMessage(chatId, messageText);
+      console.log('📥 ChatDetail: Réponse envoi:', response);
 
       if (response.success) {
         // Remplacer le message temporaire par le vrai
         setMessages(prev => 
           prev.map(msg => 
-            msg._id === tempMessage._id ? response.data : msg
+            msg._id === tempMessage._id ? {
+              ...response.data,
+              content: messageText,
+              message: messageText
+            } : msg
           )
         );
         
@@ -123,21 +132,22 @@ const ChatDetailScreen = ({ route, navigation }) => {
         setChat(prev => ({
           ...prev,
           lastMessage: {
-            text: messageText,
+            content: messageText,
             senderId: currentUserId,
             senderName: 'Vous',
-            sentAt: new Date().toISOString()
+            createdAt: new Date().toISOString()
           },
           lastActivityAt: new Date().toISOString(),
-          messageCount: prev.messageCount + 1
+          messageCount: (prev.messageCount || 0) + 1
         }));
       } else {
         // Supprimer le message temporaire en cas d'erreur
         setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
-        Alert.alert('Erreur', 'Impossible d\'envoyer le message');
+        console.error('❌ ChatDetail: Erreur envoi message:', response.message);
+        Alert.alert('Erreur', response.message || 'Impossible d\'envoyer le message');
       }
     } catch (error) {
-      console.error('Erreur envoi message:', error);
+      console.error('💥 ChatDetail: Erreur envoi message:', error);
       setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
       Alert.alert('Erreur', 'Problème de connexion');
     } finally {
@@ -262,7 +272,7 @@ const ChatDetailScreen = ({ route, navigation }) => {
         {/* Message système */}
         {isSystemMessage ? (
           <View style={styles.systemMessageContainer}>
-            <Text style={styles.systemMessageText}>{item.message.text}</Text>
+            <Text style={styles.systemMessageText}>{item.content || item.message}</Text>
           </View>
         ) : (
           /* Message normal */
@@ -283,7 +293,7 @@ const ChatDetailScreen = ({ route, navigation }) => {
                 styles.messageText,
                 isCurrentUser ? styles.currentUserText : styles.otherUserText
               ]}>
-                {item.message.text}
+                {item.content || item.message || 'Message...'}
               </Text>
               
               <View style={styles.messageFooter}>
@@ -414,16 +424,17 @@ const ChatDetailScreen = ({ route, navigation }) => {
           
           <View style={styles.headerInfo}>
             <Text style={styles.headerTitle} numberOfLines={1}>
-              {chat.participants.service.serviceName}
+              {chat.targetDepartment || chat.department || 'Département'}
             </Text>
             <View style={styles.headerStatus}>
-              <Ionicons name="person" size={12} color="#666" />
+              <Ionicons name="location" size={12} color="#666" />
               <Text style={styles.headerSubtitle}>
-                {chat.participants.service.currentRepresentative.name}
+                {chat.targetLocation || chat.location || 'Location'}
               </Text>
               <Text style={[styles.statusBadge, { color: statusColor }]}>
-                • {chat.status === 'active' ? 'En ligne' : 
+                • {chat.status === 'active' ? 'Actif' : 
                    chat.status === 'pending' ? 'En attente' :
+                   chat.status === 'in_progress' ? 'En cours' :
                    chat.status === 'resolved' ? 'Résolu' : 'Fermé'}
               </Text>
             </View>

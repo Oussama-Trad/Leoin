@@ -15,7 +15,7 @@ public class ChatMessage {
     @Id
     private String id;
     
-    private String chatId;
+    private String chatRef; // IMPORTANT: Correspond au 'chatRef' dans MongoDB
     private String senderId;
     private String senderName;
     private String senderEmail;
@@ -44,9 +44,9 @@ public class ChatMessage {
         this.isEdited = false;
     }
     
-    public ChatMessage(String chatId, String senderId, String senderName, String message) {
+    public ChatMessage(String chatRef, String senderId, String senderName, String message) {
         this();
-        this.chatId = chatId;
+        this.chatRef = chatRef;
         this.senderId = senderId;
         this.senderName = senderName;
         this.message = message;
@@ -61,12 +61,12 @@ public class ChatMessage {
         this.id = id;
     }
     
-    public String getChatId() {
-        return chatId;
+    public String getChatRef() {
+        return chatRef;
     }
     
-    public void setChatId(String chatId) {
-        this.chatId = chatId;
+    public void setChatRef(String chatRef) {
+        this.chatRef = chatRef;
     }
     
     public String getSenderId() {
@@ -211,7 +211,7 @@ public class ChatMessage {
     public String toString() {
         return "ChatMessage{" +
                 "id='" + id + '\'' +
-                ", chatId='" + chatId + '\'' +
+                ", chatRef='" + chatRef + '\'' +
                 ", senderId='" + senderId + '\'' +
                 ", senderName='" + senderName + '\'' +
                 ", senderType='" + senderType + '\'' +

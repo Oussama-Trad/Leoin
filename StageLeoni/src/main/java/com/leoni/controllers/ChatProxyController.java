@@ -15,7 +15,7 @@ import java.util.Map;
  * Contrôleur proxy pour rediriger les appels chat vers le backend Python
  */
 @RestController
-@RequestMapping("/admin/chat/api")
+@RequestMapping("/admin/chat/proxy")
 public class ChatProxyController {
     
     @Autowired

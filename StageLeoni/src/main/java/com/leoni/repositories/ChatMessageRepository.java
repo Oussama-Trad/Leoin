@@ -12,71 +12,80 @@ import java.util.List;
 
 /**
  * Repository pour la gestion des messages de chat
+ * IMPORTANT: Les messages dans MongoDB utilisent 'chatRef' au lieu de 'chatId'
  */
 @Repository
 public interface ChatMessageRepository extends MongoRepository<ChatMessage, String> {
     
-    // Messages d'une conversation, triés par date
-    List<ChatMessage> findByChatIdOrderByCreatedAtAsc(String chatId);
+    // Messages d'une conversation, triés par date (utilise chatRef)
+    @Query("{ 'chatRef': ?0 }")
+    List<ChatMessage> findByChatRefOrderByCreatedAtAsc(String chatRef);
     
-    // Messages d'une conversation avec pagination
-    Page<ChatMessage> findByChatIdOrderByCreatedAtAsc(String chatId, Pageable pageable);
+    // Messages d'une conversation avec pagination (utilise chatRef)
+    @Query("{ 'chatRef': ?0 }")
+    Page<ChatMessage> findByChatRefOrderByCreatedAtAsc(String chatRef, Pageable pageable);
     
-    // Messages non lus d'une conversation
-    List<ChatMessage> findByChatIdAndIsReadFalseOrderByCreatedAtAsc(String chatId);
+    // Messages non lus d'une conversation (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'isRead': false }")
+    List<ChatMessage> findByChatRefAndIsReadFalseOrderByCreatedAtAsc(String chatRef);
     
-    // Dernier message d'une conversation
-    ChatMessage findFirstByChatIdOrderByCreatedAtDesc(String chatId);
+    // Dernier message d'une conversation (utilise chatRef)
+    @Query(value = "{ 'chatRef': ?0 }", sort = "{ 'createdAt': -1 }")
+    ChatMessage findFirstByChatRefOrderByCreatedAtDesc(String chatRef);
     
     // Messages envoyés par un utilisateur spécifique
     List<ChatMessage> findBySenderIdOrderByCreatedAtDesc(String senderId);
     
-    // Messages d'un type spécifique (admin, user, etc.)
-    List<ChatMessage> findByChatIdAndSenderTypeOrderByCreatedAtAsc(String chatId, String senderType);
+    // Messages d'un type spécifique (admin, user, etc.) (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'senderType': ?1 }")
+    List<ChatMessage> findByChatRefAndSenderTypeOrderByCreatedAtAsc(String chatRef, String senderType);
     
-    // Compter les messages non lus dans une conversation
-    @Query(value = "{ 'chatId': ?0, 'isRead': false }", count = true)
-    long countUnreadMessagesByChatId(String chatId);
+    // Compter les messages non lus dans une conversation (utilise chatRef)
+    @Query(value = "{ 'chatRef': ?0, 'isRead': false }", count = true)
+    long countUnreadMessagesByChatRef(String chatRef);
     
-    // Compter les messages non lus pour un utilisateur spécifique
-    @Query(value = "{ 'chatId': ?0, 'isRead': false, 'senderId': { $ne: ?1 } }", count = true)
-    long countUnreadMessagesForUser(String chatId, String userId);
+    // Compter les messages non lus pour un utilisateur spécifique (utilise chatRef)
+    @Query(value = "{ 'chatRef': ?0, 'isRead': false, 'senderId': { $ne: ?1 } }", count = true)
+    long countUnreadMessagesForUser(String chatRef, String userId);
     
-    // Messages créés dans une période
-    @Query("{ 'chatId': ?0, 'createdAt': { $gte: ?1, $lte: ?2 } }")
-    List<ChatMessage> findByChatIdAndCreatedAtBetween(
-        String chatId, LocalDateTime startDate, LocalDateTime endDate);
+    // Messages créés dans une période (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'createdAt': { $gte: ?1, $lte: ?2 } }")
+    List<ChatMessage> findByChatRefAndCreatedAtBetween(
+        String chatRef, LocalDateTime startDate, LocalDateTime endDate);
     
-    // Messages modifiés
-    List<ChatMessage> findByChatIdAndIsEditedTrueOrderByEditedAtDesc(String chatId);
+    // Messages modifiés (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'isEdited': true }")
+    List<ChatMessage> findByChatRefAndIsEditedTrueOrderByEditedAtDesc(String chatRef);
     
-    // Recherche textuelle dans les messages
-    @Query("{ 'chatId': ?0, 'message': { $regex: ?1, $options: 'i' } }")
-    List<ChatMessage> findByChatIdAndMessageContainingIgnoreCase(String chatId, String keyword);
+    // Recherche textuelle dans les messages (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'message': { $regex: ?1, $options: 'i' } }")
+    List<ChatMessage> findByChatRefAndMessageContainingIgnoreCase(String chatRef, String keyword);
     
-    // Messages par type (texte, fichier, image)
-    List<ChatMessage> findByChatIdAndMessageTypeOrderByCreatedAtAsc(String chatId, String messageType);
+    // Messages par type (texte, fichier, image) (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'messageType': ?1 }")
+    List<ChatMessage> findByChatRefAndMessageTypeOrderByCreatedAtAsc(String chatRef, String messageType);
     
-    // Statistiques - messages par période pour un chat
-    @Query(value = "{ 'chatId': ?0, 'createdAt': { $gte: ?1, $lte: ?2 } }", count = true)
-    long countMessagesByChatIdAndDateRange(String chatId, LocalDateTime startDate, LocalDateTime endDate);
+    // Statistiques - messages par période pour un chat (utilise chatRef)
+    @Query(value = "{ 'chatRef': ?0, 'createdAt': { $gte: ?1, $lte: ?2 } }", count = true)
+    long countMessagesByChatRefAndDateRange(String chatRef, LocalDateTime startDate, LocalDateTime endDate);
     
-    // Statistiques - messages par expéditeur dans un chat
-    @Query(value = "{ 'chatId': ?0, 'senderId': ?1 }", count = true)
-    long countMessagesByChatIdAndSenderId(String chatId, String senderId);
+    // Statistiques - messages par expéditeur dans un chat (utilise chatRef)
+    @Query(value = "{ 'chatRef': ?0, 'senderId': ?1 }", count = true)
+    long countMessagesByChatRefAndSenderId(String chatRef, String senderId);
     
-    // Messages récents (dernières heures)
-    @Query("{ 'chatId': ?0, 'createdAt': { $gte: ?1 } }")
-    List<ChatMessage> findRecentMessagesByChatId(String chatId, LocalDateTime since);
+    // Messages récents (dernières heures) (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'createdAt': { $gte: ?1 } }")
+    List<ChatMessage> findRecentMessagesByChatRef(String chatRef, LocalDateTime since);
     
-    // Supprimer tous les messages d'une conversation
-    void deleteByChatId(String chatId);
+    // Supprimer tous les messages d'une conversation (utilise chatRef)
+    @Query(value = "{ 'chatRef': ?0 }", delete = true)
+    void deleteByChatRef(String chatRef);
     
-    // Messages non lus par type d'expéditeur
-    @Query("{ 'chatId': ?0, 'senderType': ?1, 'isRead': false }")
-    List<ChatMessage> findUnreadMessagesByChatIdAndSenderType(String chatId, String senderType);
+    // Messages non lus par type d'expéditeur (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'senderType': ?1, 'isRead': false }")
+    List<ChatMessage> findUnreadMessagesByChatRefAndSenderType(String chatRef, String senderType);
     
-    // Marquer tous les messages comme lus
-    @Query("{ 'chatId': ?0, 'isRead': false }")
-    List<ChatMessage> findUnreadMessagesByChatId(String chatId);
+    // Marquer tous les messages comme lus (utilise chatRef)
+    @Query("{ 'chatRef': ?0, 'isRead': false }")
+    List<ChatMessage> findUnreadMessagesByChatRef(String chatRef);
 }

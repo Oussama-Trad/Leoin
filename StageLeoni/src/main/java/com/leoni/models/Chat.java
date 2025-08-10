@@ -28,6 +28,10 @@ public class Chat {
     private String targetDepartment;
     private String targetLocation;
     
+    // Champs pour supporter l'ancien schéma (participants/service)
+    private String category; // ancien: "rh_support", "production_support", etc.
+    private Object participants; // ancien schéma complexe avec employee/service
+    
     private String assignedAdminId;
     private String assignedAdminName;
     
@@ -129,6 +133,22 @@ public class Chat {
     
     public void setTargetLocation(String targetLocation) {
         this.targetLocation = targetLocation;
+    }
+    
+    public String getCategory() {
+        return category;
+    }
+    
+    public void setCategory(String category) {
+        this.category = category;
+    }
+    
+    public Object getParticipants() {
+        return participants;
+    }
+    
+    public void setParticipants(Object participants) {
+        this.participants = participants;
     }
     
     public String getAssignedAdminId() {

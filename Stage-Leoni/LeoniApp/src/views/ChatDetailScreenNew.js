@@ -15,7 +15,11 @@ import { Ionicons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 export default function ChatDetailScreen({ route, navigation }) {
-  const { chat } = route.params || {};
+  const params = route.params || {};
+  // Support multiple parameter names for chat data
+  const chat = params.chat || params.chatData || params.conversationData || null;
+  const chatId = params.chatId || params.conversationId || (chat && chat._id) || null;
+  
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
 

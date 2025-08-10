@@ -20,6 +20,7 @@ public class AuthResponse {
     private String userId; // ID of the admin or superadmin
     private String location; // For admin users
     private String department; // For admin users
+    private String departmentId; // For admin users - department ID
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date loginTime;

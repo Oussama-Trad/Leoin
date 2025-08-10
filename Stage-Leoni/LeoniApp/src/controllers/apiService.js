@@ -231,14 +231,14 @@ export const chatAPI = {
 
   // Récupérer les messages d'une conversation
   getChatMessages: async (chatId) => {
-    return await fetchFromAPI(`/api/chats/${chatId}/messages`);
+    return await fetchFromAPI(`/api/chat/conversation/${chatId}/messages`);
   },
 
   // Envoyer un message
-  sendMessage: async (chatId, text) => {
-    return await fetchFromAPI(`/api/chats/${chatId}/messages`, {
+  sendMessage: async (chatId, content) => {
+    return await fetchFromAPI(`/api/chat/conversation/${chatId}/message`, {
       method: 'POST',
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ content })
     });
   },
 

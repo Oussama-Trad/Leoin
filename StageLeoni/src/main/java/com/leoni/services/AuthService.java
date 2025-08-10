@@ -56,6 +56,11 @@ public class AuthService {
             response.setUserId(admin.get().getId());
             response.setLocation(admin.get().getLocation());
             response.setDepartment(admin.get().getDepartment());
+            response.setDepartmentId(admin.get().getDepartmentId());
+            
+            System.out.println("Admin authenticated - ID: " + admin.get().getId() + 
+                             ", Location: " + admin.get().getLocation() + 
+                             ", Department: " + admin.get().getDepartment());
             return response;
         }
         
@@ -258,5 +263,69 @@ public class AuthService {
             return "fallback-admin";
         }
         return userId;
+    }
+    
+    /**
+     * Get admin information from token
+     * @param token the authentication token
+     * @return Admin object if found, null otherwise
+     */
+    public Admin getAdminFromToken(String token) {
+        if (!validateToken(token)) {
+            return null;
+        }
+        
+        String role = getRoleFromToken(token);
+        if (!"ADMIN".equals(role)) {
+            return null;
+        }
+        
+        String userId = getUserIdFromToken(token);
+        if (userId != null && !"fallback-admin".equals(userId)) {
+            Optional<Admin> admin = adminService.findById(userId);
+            if (admin.isPresent()) {
+                return admin.get();
+            }
+        }
+        
+        // Try to find admin by username for fallback cases
+        String username = getUsernameFromToken(token);
+        if (username != null) {
+            Optional<Admin> admin = adminService.findByUsername(username);
+            if (admin.isPresent()) {
+                return admin.get();
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get admin location from token
+     * @param token the authentication token
+     * @return admin location if found, null otherwise
+     */
+    public String getAdminLocationFromToken(String token) {
+        Admin admin = getAdminFromToken(token);
+        return admin != null ? admin.getLocation() : null;
+    }
+    
+    /**
+     * Get admin department from token
+     * @param token the authentication token
+     * @return admin department if found, null otherwise
+     */
+    public String getAdminDepartmentFromToken(String token) {
+        Admin admin = getAdminFromToken(token);
+        return admin != null ? admin.getDepartment() : null;
+    }
+    
+    /**
+     * Check if user is super admin from token
+     * @param token the authentication token
+     * @return true if user has SUPERADMIN role
+     */
+    public boolean isSuperAdminFromToken(String token) {
+        return "SUPERADMIN".equals(getRoleFromToken(token));
     }
 }

@@ -412,10 +412,13 @@ def create_chat_with_department(current_user_id, current_user_email):
                     {'$inc': {'messageCount': 1}}
                 )
 
-            # Préparation de la réponse
+            # Préparation de la réponse pour l'app mobile
             response_data = {
                 '_id': str(conversation_id),
+                'id': str(conversation_id),  # Ajouter id pour compatibilité
+                'chatId': str(conversation_id),  # Ajouter chatId pour navigation
                 'subject': subject,
+                'title': subject,  # Ajouter title pour affichage
                 'department': department,
                 'targetDepartment': department,
                 'targetLocation': target_dept.get('location', ''),
@@ -423,12 +426,17 @@ def create_chat_with_department(current_user_id, current_user_email):
                 'priority': 'normal',
                 'messageCount': 1 if initial_message else 0,
                 'createdAt': current_time.isoformat(),
-                'lastActivityAt': current_time.isoformat()
+                'lastActivityAt': current_time.isoformat(),
+                # Propriétés pour la navigation mobile
+                'name': f"Chat - {department}",
+                'color': '#002857',
+                'icon': 'chatbubble-outline'
             }
 
             if initial_message:
                 response_data['lastMessage'] = {
                     'content': initial_message,
+                    'message': initial_message,  # Compatibilité
                     'senderName': user_name,
                     'senderRole': 'employee',
                     'createdAt': current_time.isoformat()
@@ -498,7 +506,10 @@ def get_user_chats_mobile(current_user_id, current_user_email):
             
             conv_data = {
                 '_id': str(conv['_id']),
-                'subject': conv.get('subject', ''),
+                'id': str(conv['_id']),  # Compatibilité
+                'chatId': str(conv['_id']),  # Pour navigation
+                'subject': conv.get('subject', conv.get('title', 'Conversation')),
+                'title': conv.get('subject', conv.get('title', 'Conversation')),
                 'targetDepartment': conv.get('targetDepartment', ''),
                 'targetLocation': conv.get('targetLocation', ''),
                 'status': conv.get('status', 'pending'),
@@ -671,12 +682,17 @@ def get_conversation_messages(current_user_id, current_user_email, conversation_
         for msg in messages:
             msg_data = {
                 '_id': str(msg['_id']),
-                'content': msg.get('content', ''),
+                'id': str(msg['_id']),  # Compatibilité
+                'content': msg.get('content', msg.get('message', '')),
+                'message': msg.get('content', msg.get('message', '')),  # Compatibilité
                 'senderId': str(msg.get('senderId', '')),
                 'senderName': msg.get('senderName', ''),
                 'senderRole': msg.get('senderRole', 'employee'),
+                'senderType': msg.get('senderType', 'user'),
                 'createdAt': msg.get('createdAt').isoformat() if msg.get('createdAt') else None,
-                'isRead': msg.get('isRead', False)
+                'isRead': msg.get('isRead', False),
+                # Pour l'affichage mobile
+                'isCurrentUser': msg.get('senderRole') == 'employee'
             }
             messages_list.append(msg_data)
         
@@ -749,112 +765,7 @@ def send_message(current_user_id, current_user_email, conversation_id):
         print(f"Erreur envoi message: {e}")
         return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
 
-# News Routes
-@app.route('/api/admin/chat/conversations', methods=['GET', 'OPTIONS'])
-def get_admin_conversations():
-    if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'}), 200
-    """Récupérer les conversations pour un admin selon ses droits"""
-    try:
-        # Récupérer le token admin depuis les headers
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({'success': False, 'message': 'Token admin requis'}), 401
-        
-        token = auth_header[7:]  # Enlever 'Bearer '
-        
-        # Pour cette implémentation simplifiée, on va récupérer l'admin depuis la base
-        # En production, il faudrait décoder le JWT
-        admin_username = request.args.get('admin_username')
-        admin_role = request.args.get('admin_role', 'ADMIN')
-        
-        if not admin_username:
-            return jsonify({'success': False, 'message': 'Nom admin requis'}), 400
-        
-        # Récupérer l'admin
-        admin = admins_collection.find_one({'username': admin_username, 'active': True})
-        if not admin:
-            return jsonify({'success': False, 'message': 'Admin non trouvé'}), 404
-        
-        # Construire le filtre selon les droits
-        filter_query = {}
-        
-        if admin_role == 'SUPERADMIN':
-            # Super admin voit toutes les conversations
-            filter_query = {}
-        else:
-            # Admin normal voit seulement les conversations de son département et location
-            admin_location = admin.get('location')
-            admin_department = admin.get('department')
-            
-            if admin_location and admin_department:
-                filter_query = {
-                    'targetLocation': admin_location,
-                    'targetDepartment': admin_department
-                }
-            elif admin_department:
-                filter_query = {'targetDepartment': admin_department}
-            else:
-                # Si pas de location/département défini, ne voir aucune conversation
-                filter_query = {'_id': None}
-        
-        # Récupérer les conversations
-        conversations = list(chats_collection.find(filter_query).sort('lastActivityAt', -1).limit(100))
-        
-        conversations_list = []
-        for conv in conversations:
-            # Récupérer le dernier message
-            last_message = chat_messages_collection.find_one(
-                {'chatRef': conv['_id']}, 
-                sort=[('createdAt', -1)]
-            )
-            
-            conv_data = {
-                '_id': str(conv['_id']),
-                'title': conv.get('title', ''),
-                'description': conv.get('description', ''),
-                'targetDepartment': conv.get('targetDepartment', ''),
-                'targetLocation': conv.get('targetLocation', ''),
-                'status': conv.get('status', 'pending'),
-                'priority': conv.get('priority', 'normal'),
-                'userName': conv.get('userName', ''),
-                'userEmail': conv.get('userEmail', ''),
-                'userDepartment': conv.get('userDepartment', ''),
-                'userLocation': conv.get('userLocation', ''),
-                'createdAt': conv.get('createdAt').isoformat() if conv.get('createdAt') else None,
-                'lastActivityAt': conv.get('lastActivityAt').isoformat() if conv.get('lastActivityAt') else None,
-                'messageCount': conv.get('messageCount', 0)
-            }
-            
-            if last_message:
-                conv_data['lastMessage'] = {
-                    'content': last_message.get('content', ''),
-                    'senderName': last_message.get('senderName', ''),
-                    'senderRole': last_message.get('senderRole', ''),
-                    'createdAt': last_message.get('createdAt').isoformat() if last_message.get('createdAt') else None
-                }
-            
-            conversations_list.append(conv_data)
-        
-        return jsonify({
-            'success': True,
-            'conversations': conversations_list,
-            'count': len(conversations_list),
-            'filter': filter_query,
-            'adminRole': admin_role
-        })
-        
-    except Exception as e:
-        print(f"💥 GET ADMIN CONVERSATIONS ERROR: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'conversations': [],
-            'total': 0,
-            'page': 0,
-            'size': 10
-        }), 500
-
+# News Routes (pour l'app mobile)
 @app.route('/api/news', methods=['GET', 'OPTIONS'])
 def get_news():
     print(f"🔥 GET NEWS - Method: {request.method}")
@@ -892,172 +803,6 @@ def get_news():
         
     except Exception as e:
         print(f"💥 GET NEWS ERROR: {e}")
-        return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
-
-# Admin reply route
-@app.route('/api/admin/chat/conversation/<conversation_id>/reply', methods=['POST'])
-def admin_reply_to_conversation(conversation_id):
-    """Admin répond à une conversation"""
-    
-    data = request.get_json()
-    
-    if not data.get('content', '').strip():
-        return jsonify({'success': False, 'message': 'Le message ne peut pas être vide'}), 400
-    
-    # Récupérer le token admin
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({'success': False, 'message': 'Token admin requis'}), 401
-    
-    admin_username = data.get('admin_username')
-    admin_role = data.get('admin_role', 'ADMIN')
-    
-    if not admin_username:
-        return jsonify({'success': False, 'message': 'Nom admin requis'}), 400
-    
-    try:
-        # Vérifier que la conversation existe
-        conversation = chats_collection.find_one({'_id': ObjectId(conversation_id)})
-        if not conversation:
-            return jsonify({'success': False, 'message': 'Conversation non trouvée'}), 404
-        
-        # Vérifier les droits de l'admin
-        admin = admins_collection.find_one({'username': admin_username, 'active': True})
-        if not admin:
-            return jsonify({'success': False, 'message': 'Admin non trouvé'}), 404
-        
-        # Vérifier les permissions
-        if admin_role != 'SUPERADMIN':
-            admin_location = admin.get('location')
-            admin_department = admin.get('department')
-            conv_location = conversation.get('targetLocation')
-            conv_department = conversation.get('targetDepartment')
-            
-            if admin_location != conv_location or admin_department != conv_department:
-                return jsonify({'success': False, 'message': 'Droits insuffisants'}), 403
-        
-        # Créer le message de réponse
-        message_data = {
-            'chatRef': ObjectId(conversation_id),  # Changed from chatId to chatRef
-            'message': data['content'].strip(),  # Primary field as per schema
-            'content': data['content'].strip(),  # Keep for compatibility
-            'senderId': ObjectId(admin['_id']),
-            'senderName': admin.get('username', 'Admin'),
-            'senderRole': 'admin',
-            'senderType': 'admin',
-            'createdAt': datetime.utcnow(),
-            'isRead': False
-        }
-        
-        # Insérer le message
-        result = chat_messages_collection.insert_one(message_data)
-        
-        # Mettre à jour la conversation
-        update_data = {
-            'lastActivityAt': datetime.utcnow(),
-            'status': 'in_progress'
-        }
-        
-        chats_collection.update_one(
-            {'_id': ObjectId(conversation_id)},
-            {
-                '$set': update_data,
-                '$inc': {'messageCount': 1}
-            }
-        )
-        
-        return jsonify({
-            'success': True,
-            'message': 'Réponse envoyée avec succès',
-            'messageId': str(result.inserted_id)
-        })
-        
-    except Exception as e:
-        print(f"💥 ERROR admin reply: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': 'Erreur lors de l\'envoi de la réponse'
-        }), 500
-
-@app.route('/api/admin/chat/statistics', methods=['GET'])
-def get_admin_chat_statistics():
-    """Récupérer les statistiques des conversations pour un admin"""
-    try:
-        # Récupérer les paramètres admin
-        admin_username = request.args.get('admin_username')
-        admin_role = request.args.get('admin_role', 'ADMIN')
-        
-        if not admin_username:
-            return jsonify({'success': False, 'message': 'Nom admin requis'}), 400
-        
-        # Récupérer l'admin
-        admin = admins_collection.find_one({'username': admin_username, 'active': True})
-        if not admin:
-            return jsonify({'success': False, 'message': 'Admin non trouvé'}), 404
-        
-        # Construire le filtre selon les droits
-        filter_query = {}
-        
-        if admin_role == 'SUPERADMIN':
-            # Super admin voit toutes les conversations
-            filter_query = {}
-        else:
-            # Admin normal voit seulement les conversations de son département et location
-            admin_location = admin.get('location')
-            admin_department = admin.get('department')
-            
-            if admin_location and admin_department:
-                filter_query = {
-                    'targetLocation': admin_location,
-                    'targetDepartment': admin_department
-                }
-            elif admin_department:
-                filter_query = {'targetDepartment': admin_department}
-            else:
-                # Si pas de location/département défini, ne voir aucune conversation
-                filter_query = {'_id': None}
-        
-        # Calculer les statistiques
-        total_chats = chats_collection.count_documents(filter_query)
-        
-        # Conversations actives (ouvertes ou en cours)
-        active_filter = dict(filter_query)
-        active_filter['status'] = {'$in': ['open', 'in_progress']}
-        active_chats = chats_collection.count_documents(active_filter)
-        
-        # Conversations fermées
-        closed_filter = dict(filter_query)
-        closed_filter['status'] = 'closed'
-        closed_chats = chats_collection.count_documents(closed_filter)
-        
-        # Conversations des dernières 24h
-        from datetime import timedelta
-        last_24h = datetime.utcnow() - timedelta(hours=24)
-        recent_filter = dict(filter_query)
-        recent_filter['createdAt'] = {'$gte': last_24h}
-        chats_last_24h = chats_collection.count_documents(recent_filter)
-        
-        # Messages non lus (approximation basée sur les conversations avec activité récente)
-        unread_filter = dict(filter_query)
-        unread_filter['lastActivityAt'] = {'$gte': last_24h}
-        unread_filter['status'] = {'$ne': 'closed'}
-        unread_chats = chats_collection.count_documents(unread_filter)
-        
-        statistics = {
-            'success': True,
-            'totalChats': total_chats,
-            'activeChats': active_chats,
-            'closedChats': closed_chats,
-            'unreadChats': unread_chats,
-            'chatsLast24h': chats_last_24h,
-            'adminRole': admin_role,
-            'adminUsername': admin_username
-        }
-        
-        return jsonify(statistics)
-        
-    except Exception as e:
-        print(f"Erreur récupération statistiques chat admin: {e}")
         return jsonify({'success': False, 'message': 'Erreur serveur'}), 500
 
 @app.route('/api/debug/chats', methods=['GET']) 

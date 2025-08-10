@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Chat MongoDB - LEONI Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .chat-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        .chat-item:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+        .badge-department {
+            background: #28a745;
+        }
+        .badge-location {
+            background: #17a2b8;
+        }
+        .badge-status {
+            background: #ffc107;
+            color: #212529;
+        }
+        .badge-pending {
+            background: #dc3545;
+        }
+        .badge-resolved {
+            background: #28a745;
+        }
+        .raw-data {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-2 d-md-block bg-light sidebar">
+                <div class="position-sticky pt-3">
+                    <h6 class="sidebar-heading text-muted">
+                        <span>LEONI Admin</span>
+                    </h6>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/dashboard">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/admin/chats-mongo">
+                                <i class="fas fa-comments"></i> Chat MongoDB
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-10 ms-sm-auto px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-database text-primary"></i>
+                        Gestion Chat MongoDB Direct
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="refreshData()">
+                            <i class="fas fa-sync"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error message -->
+                <div th:if="${error}" class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span th:text="${error}"></span>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h3 th:text="${totalChats}">0</h3>
+                                    <p class="mb-0">Total Conversations</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-comments fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h3 id="totalMessages">0</h3>
+                                    <p class="mb-0">Total Messages</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-envelope fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h3 th:text="${departmentStats.size()}">0</h3>
+                                    <p class="mb-0">Départements</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-building fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h3 th:text="${locationStats.size()}">0</h3>
+                                    <p class="mb-0">Locations</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-map-marker-alt fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Department Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-building"></i> Par Département</h5>
+                            </div>
+                            <div class="card-body">
+                                <div th:each="dept : ${departmentStats}" class="d-flex justify-content-between mb-2">
+                                    <span th:text="${dept.key}">Département</span>
+                                    <span class="badge badge-department" th:text="${dept.value}">0</span>
+                                </div>
+                                <div th:if="${departmentStats.isEmpty()}" class="text-muted">
+                                    Aucun département trouvé
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-map-marker-alt"></i> Par Location</h5>
+                            </div>
+                            <div class="card-body">
+                                <div th:each="loc : ${locationStats}" class="d-flex justify-content-between mb-2">
+                                    <span th:text="${loc.key}">Location</span>
+                                    <span class="badge badge-location" th:text="${loc.value}">0</span>
+                                </div>
+                                <div th:if="${locationStats.isEmpty()}" class="text-muted">
+                                    Aucune location trouvée
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-pie"></i> Par Statut</h5>
+                            </div>
+                            <div class="card-body">
+                                <div th:each="status : ${statusStats}" class="d-flex justify-content-between mb-2">
+                                    <span th:text="${status.key}">Statut</span>
+                                    <span class="badge" 
+                                          th:classappend="${status.key == 'pending'} ? 'badge-pending' : 'badge-resolved'"
+                                          th:text="${status.value}">0</span>
+                                </div>
+                                <div th:if="${statusStats.isEmpty()}" class="text-muted">
+                                    Aucun statut trouvé
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversations List -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list"></i> Liste des Conversations</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="chatsList">
+                            <div th:each="chat : ${chats}" class="chat-item">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6 th:text="${chat.subject ?: chat.title ?: 'Conversation sans titre'}">Titre</h6>
+                                        <p class="text-muted mb-2" th:text="${chat.description ?: 'Pas de description'}">Description</p>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <span th:if="${chat.targetDepartment}" 
+                                                  class="badge badge-department" 
+                                                  th:text="'Dept: ' + ${chat.targetDepartment}">Département</span>
+                                            <span th:if="${chat.department and !chat.targetDepartment}" 
+                                                  class="badge badge-department" 
+                                                  th:text="'Dept: ' + ${chat.department}">Département</span>
+                                            <span th:if="${chat.targetLocation}" 
+                                                  class="badge badge-location" 
+                                                  th:text="'Loc: ' + ${chat.targetLocation}">Location</span>
+                                            <span th:if="${chat.userLocation}" 
+                                                  class="badge badge-location" 
+                                                  th:text="'User: ' + ${chat.userLocation}">User Location</span>
+                                            <span class="badge badge-status" 
+                                                  th:text="${chat.status ?: 'pending'}">Status</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <small class="text-muted" th:text="${chat.createdAt}">Date</small><br>
+                                        <small th:if="${chat.userName}" 
+                                               th:text="'Par: ' + ${chat.userName}">Utilisateur</small><br>
+                                        <small th:if="${chat.userEmail}" 
+                                               th:text="${chat.userEmail}">Email</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Raw data (collapsible) -->
+                                <div class="mt-3">
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            type="button" 
+                                            th:attr="data-bs-toggle='collapse', data-bs-target='#rawData' + ${chatStat.index}">
+                                        <i class="fas fa-code"></i> Données brutes
+                                    </button>
+                                    <div class="collapse mt-2" th:id="'rawData' + ${chatStat.index}">
+                                        <div class="raw-data">
+                                            <pre th:text="${chat}">Raw chat data</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div th:if="${chats.isEmpty()}" class="text-center text-muted py-4">
+                                <i class="fas fa-comments fa-3x mb-3"></i>
+                                <h5>Aucune conversation trouvée</h5>
+                                <p>Il n'y a actuellement aucune conversation dans la base de données.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debug Information -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-bug"></i> Informations de Debug</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>API Endpoints disponibles:</h6>
+                                <ul class="list-unstyled">
+                                    <li><code>GET /admin/chats-mongo/api/conversations</code></li>
+                                    <li><code>GET /admin/chats-mongo/api/messages</code></li>
+                                    <li><code>GET /admin/chats-mongo/api/stats</code></li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Collections MongoDB:</h6>
+                                <ul class="list-unstyled">
+                                    <li><code>chats</code> - Conversations</li>
+                                    <li><code>chat_messages</code> - Messages</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function refreshData() {
+            window.location.reload();
+        }
+
+        // Charger les statistiques des messages
+        fetch('/admin/chats-mongo/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('totalMessages').textContent = data.totalMessages;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement des stats:', error);
+            });
+    </script>
+</body>
+</html>
