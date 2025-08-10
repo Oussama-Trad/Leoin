@@ -58,15 +58,8 @@ public class AuthController {
             // Try to authenticate as SuperAdmin
             Optional<SuperAdmin> superAdmin = superAdminService.authenticate(authRequest.getUsername(), authRequest.getPassword());
             if (superAdmin.isPresent()) {
-                // Create response for SuperAdmin
-                AuthResponse response = new AuthResponse(
-                    true,
-                    "Authentication successful",
-                    "superadmin-token-" + System.currentTimeMillis(),
-                    authRequest.getUsername()
-                );
-                response.setRole("SUPERADMIN");
-                response.setUserId(superAdmin.get().getId());
+                // Use AuthService to properly authenticate and get a valid token
+                AuthResponse response = authService.authenticate(authRequest);
                 System.out.println("SuperAdmin authenticated, returning: " + response);
                 return ResponseEntity.ok(response);
             }

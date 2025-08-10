@@ -48,20 +48,33 @@ public class SuperAdminService {
      */
     public Optional<SuperAdmin> authenticate(String username, String password) {
         try {
+            System.out.println("SuperAdminService.authenticate called with username: " + username);
             Optional<SuperAdmin> superAdmin = superAdminRepository.findByUsernameAndActiveTrue(username);
+            System.out.println("Repository query result: " + (superAdmin.isPresent() ? "Found" : "Not found"));
             
-            if (superAdmin.isPresent() && superAdmin.get().getPassword().equals(password)) {
-                SuperAdmin admin = superAdmin.get();
-                admin.updateLastLogin();
-                superAdminRepository.save(admin);
-                logger.info("SuperAdmin {} authenticated successfully", username);
-                return superAdmin;
+            if (superAdmin.isPresent()) {
+                System.out.println("SuperAdmin found: " + superAdmin.get().getUsername() + ", active: " + superAdmin.get().isActive());
+                System.out.println("Password comparison: " + (superAdmin.get().getPassword().equals(password) ? "MATCH" : "NO MATCH"));
+                
+                if (superAdmin.get().getPassword().equals(password)) {
+                    SuperAdmin admin = superAdmin.get();
+                    admin.updateLastLogin();
+                    superAdminRepository.save(admin);
+                    logger.info("SuperAdmin {} authenticated successfully", username);
+                    System.out.println("SuperAdmin authentication successful");
+                    return superAdmin;
+                }
+            } else {
+                System.out.println("SuperAdmin not found in database for username: " + username);
             }
             
             logger.warn("Failed authentication attempt for SuperAdmin: {}", username);
+            System.out.println("SuperAdmin authentication failed");
             return Optional.empty();
         } catch (Exception e) {
             logger.error("Error during SuperAdmin authentication", e);
+            System.out.println("Exception in SuperAdmin authentication: " + e.getMessage());
+            e.printStackTrace();
             return Optional.empty();
         }
     }

@@ -38,13 +38,19 @@ public class AuthService {
         String password = authRequest.getPassword();
         
         // First, try to authenticate as SuperAdmin
+        System.out.println("Trying SuperAdmin authentication for username: " + username);
         Optional<SuperAdmin> superAdmin = superAdminService.authenticate(username, password);
         if (superAdmin.isPresent()) {
+            System.out.println("SuperAdmin found: " + superAdmin.get().getUsername() + ", ID: " + superAdmin.get().getId());
             String token = generateToken("SUPERADMIN", superAdmin.get().getId());
+            System.out.println("Generated token: " + token);
             AuthResponse response = AuthResponse.success(token, username);
             response.setRole("SUPERADMIN");
             response.setUserId(superAdmin.get().getId());
+            System.out.println("SuperAdmin authenticated successfully");
             return response;
+        } else {
+            System.out.println("SuperAdmin not found or authentication failed");
         }
         
         // Then, try to authenticate as Admin

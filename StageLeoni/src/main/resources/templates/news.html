@@ -183,16 +183,16 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <i class="fas fa-building"></i> <strong>Département:</strong> 
-                                        <span th:text="${article.targetDepartment != null ? article.targetDepartment : (article.department != null ? article.department : 'N/A')}">N/A</span>
+                                        <span th:text="${article.targetDepartment ?: 'N/A'}">N/A</span>
                                     </div>
                                     <div class="col-md-6">
                                         <i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> 
                                         <span th:text="${article.targetLocation != null ? article.targetLocation : (article.location != null ? article.location : 'N/A')}">N/A</span>
                                     </div>
                                 </div>
-                                <div class="mt-2" th:if="${article['createdAt'] != null}">
+                                <div class="mt-2" th:if="${article.createdAt != null}">
                                     <i class="fas fa-calendar"></i> <strong>Date:</strong> 
-                                    <span th:text="${#dates.format(article['createdAt'], 'dd/MM/yyyy HH:mm')}">Date</span>
+                                    <span th:text="${#temporals.format(article.createdAt, 'dd/MM/yyyy HH:mm')}">Date</span>
                                 </div>
                             </div>
                             
