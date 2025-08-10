@@ -139,16 +139,6 @@ public class NewsController {
         }
     }
     
-    /**
-     * Alternative POST endpoint on /api/news (for compatibility with frontend)
-     */
-    @PostMapping
-    public ResponseEntity<Map<String, Object>> createNewsAlternative(
-            @RequestBody Map<String, Object> request,
-            @RequestHeader(value = "Authorization", required = false) String authToken) {
-        // Redirect to the main create method
-        return createNews(request, authToken);
-    }
     
     /**
      * Get news based on user role and filters (ONLY location and department)

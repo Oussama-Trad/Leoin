@@ -138,4 +138,64 @@ public class NewsWebController {
             return "news";
         }
     }
+    
+    @GetMapping("/add")
+    public String addNews(Model model, @RequestParam(required = false) String adminUsername) {
+        System.out.println("NewsWebController: Add news called with adminUsername=" + adminUsername);
+        
+        try {
+            // Determine admin role and info
+            boolean isSuperAdmin = false;
+            String adminDepartment = null;
+            String adminLocation = null;
+            String displayName = adminUsername != null ? adminUsername : "Test Admin";
+            String role = "ADMIN";
+            
+            // Check if admin exists in database and get role/location/department
+            if (adminUsername != null) {
+                try {
+                    // First check in regular admins
+                    Optional<Admin> adminOpt = adminService.findByUsername(adminUsername);
+                    if (adminOpt.isPresent()) {
+                        Admin admin = adminOpt.get();
+                        isSuperAdmin = "SUPERADMIN".equals(admin.getRole());
+                        adminDepartment = admin.getDepartment();
+                        adminLocation = admin.getLocation();
+                        displayName = admin.getUsername() + " (" + admin.getRole() + ")";
+                        role = admin.getRole();
+                    } else {
+                        // Check in superadmins collection
+                        Optional<SuperAdmin> superAdminOpt = superAdminService.findByUsername(adminUsername);
+                        if (superAdminOpt.isPresent()) {
+                            SuperAdmin superAdmin = superAdminOpt.get();
+                            isSuperAdmin = true;
+                            role = "SUPERADMIN";
+                            displayName = superAdmin.getUsername() + " (SUPERADMIN)";
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error fetching admin info: " + e.getMessage());
+                }
+            }
+            
+            // Set model attributes
+            model.addAttribute("adminUsername", adminUsername);
+            model.addAttribute("adminDisplayName", displayName);
+            model.addAttribute("isSuperAdmin", isSuperAdmin);
+            model.addAttribute("adminDepartment", adminDepartment);
+            model.addAttribute("adminLocation", adminLocation);
+            model.addAttribute("role", role);
+            model.addAttribute("title", "Ajouter une Actualité");
+            model.addAttribute("currentPage", "add-news");
+            
+            return "add-news";
+            
+        } catch (Exception e) {
+            System.err.println("Add news error: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Error fallback - redirect to news page
+            return "redirect:/news?adminUsername=" + adminUsername;
+        }
+    }
 }

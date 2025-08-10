@@ -1,15 +1,8 @@
 package com.leoni.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-
 import java.util.Date;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class AuthResponse {
     
     private boolean success;
@@ -21,11 +14,16 @@ public class AuthResponse {
     private String location; // For admin users
     private String department; // For admin users
     private String departmentId; // For admin users - department ID
+    private Long tokenExpirationMinutes; // Minutes until token expires
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date loginTime;
     
-    // Constructor for successful authentication
+    // Constructeurs
+    public AuthResponse() {
+        this.loginTime = new Date();
+    }
+    
     public AuthResponse(boolean success, String message, String token, String username) {
         this.success = success;
         this.message = message;
@@ -34,11 +32,99 @@ public class AuthResponse {
         this.loginTime = new Date();
     }
     
-    // Constructor for failed authentication
     public AuthResponse(boolean success, String message) {
         this.success = success;
         this.message = message;
         this.loginTime = new Date();
+    }
+    
+    // Getters et Setters
+    public boolean isSuccess() {
+        return success;
+    }
+    
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+    
+    public String getMessage() {
+        return message;
+    }
+    
+    public void setMessage(String message) {
+        this.message = message;
+    }
+    
+    public String getToken() {
+        return token;
+    }
+    
+    public void setToken(String token) {
+        this.token = token;
+    }
+    
+    public String getUsername() {
+        return username;
+    }
+    
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    
+    public String getRole() {
+        return role;
+    }
+    
+    public void setRole(String role) {
+        this.role = role;
+    }
+    
+    public String getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+    
+    public String getLocation() {
+        return location;
+    }
+    
+    public void setLocation(String location) {
+        this.location = location;
+    }
+    
+    public String getDepartment() {
+        return department;
+    }
+    
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+    
+    public String getDepartmentId() {
+        return departmentId;
+    }
+    
+    public void setDepartmentId(String departmentId) {
+        this.departmentId = departmentId;
+    }
+    
+    public Long getTokenExpirationMinutes() {
+        return tokenExpirationMinutes;
+    }
+    
+    public void setTokenExpirationMinutes(Long tokenExpirationMinutes) {
+        this.tokenExpirationMinutes = tokenExpirationMinutes;
+    }
+    
+    public Date getLoginTime() {
+        return loginTime;
+    }
+    
+    public void setLoginTime(Date loginTime) {
+        this.loginTime = loginTime;
     }
     
     // Static factory methods for common responses
@@ -47,8 +133,7 @@ public class AuthResponse {
     }
     
     public static AuthResponse success(String message) {
-        AuthResponse response = new AuthResponse(true, message);
-        return response;
+        return new AuthResponse(true, message);
     }
     
     public static AuthResponse failure(String message) {

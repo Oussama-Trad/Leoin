@@ -49,23 +49,41 @@ public class SuperAdminService {
     public Optional<SuperAdmin> authenticate(String username, String password) {
         try {
             System.out.println("SuperAdminService.authenticate called with username: " + username);
-            Optional<SuperAdmin> superAdmin = superAdminRepository.findByUsernameAndActiveTrue(username);
+            
+            // Try with findByUsername first (more lenient)
+            Optional<SuperAdmin> superAdmin = superAdminRepository.findByUsername(username);
             System.out.println("Repository query result: " + (superAdmin.isPresent() ? "Found" : "Not found"));
             
             if (superAdmin.isPresent()) {
-                System.out.println("SuperAdmin found: " + superAdmin.get().getUsername() + ", active: " + superAdmin.get().isActive());
-                System.out.println("Password comparison: " + (superAdmin.get().getPassword().equals(password) ? "MATCH" : "NO MATCH"));
+                SuperAdmin admin = superAdmin.get();
+                System.out.println("SuperAdmin found: " + admin.getUsername() + ", active: " + admin.isActive());
+                System.out.println("Expected password: " + admin.getPassword());
+                System.out.println("Provided password: " + password);
+                System.out.println("Password comparison: " + (admin.getPassword().equals(password) ? "MATCH" : "NO MATCH"));
                 
-                if (superAdmin.get().getPassword().equals(password)) {
-                    SuperAdmin admin = superAdmin.get();
+                // Check if active and password matches
+                if (admin.isActive() && admin.getPassword().equals(password)) {
                     admin.updateLastLogin();
                     superAdminRepository.save(admin);
                     logger.info("SuperAdmin {} authenticated successfully", username);
                     System.out.println("SuperAdmin authentication successful");
                     return superAdmin;
+                } else {
+                    if (!admin.isActive()) {
+                        System.out.println("SuperAdmin account is inactive");
+                    }
+                    if (!admin.getPassword().equals(password)) {
+                        System.out.println("Password mismatch");
+                    }
                 }
             } else {
                 System.out.println("SuperAdmin not found in database for username: " + username);
+                // Try to find all superadmins to debug
+                List<SuperAdmin> allSuperAdmins = superAdminRepository.findAll();
+                System.out.println("Total SuperAdmins in database: " + allSuperAdmins.size());
+                for (SuperAdmin sa : allSuperAdmins) {
+                    System.out.println("  - Username: " + sa.getUsername() + ", Active: " + sa.isActive());
+                }
             }
             
             logger.warn("Failed authentication attempt for SuperAdmin: {}", username);

@@ -2,24 +2,23 @@ package com.leoni.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-public class AuthRequest {
+public class LoginRequest {
     
-    @NotBlank(message = "Le nom d'utilisateur est obligatoire")
+    @NotBlank(message = "Username is required")
     private String username;
     
-    @NotBlank(message = "Le mot de passe est obligatoire")
+    @NotBlank(message = "Password is required")
     private String password;
     
-    // Constructeurs
-    public AuthRequest() {
-    }
+    // Constructors
+    public LoginRequest() {}
     
-    public AuthRequest(String username, String password) {
+    public LoginRequest(String username, String password) {
         this.username = username;
         this.password = password;
     }
     
-    // Getters et Setters
+    // Getters and setters
     public String getUsername() {
         return username;
     }
@@ -38,9 +37,9 @@ public class AuthRequest {
     
     @Override
     public String toString() {
-        return "AuthRequest{" +
+        return "LoginRequest{" +
                 "username='" + username + '\'' +
-                ", password='[HIDDEN]'" +
+                ", password='[PROTECTED]'" +
                 '}';
     }
 }

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class NewsService {
@@ -203,5 +205,103 @@ public class NewsService {
         
         System.out.println("Final filtered news count: " + news.size());
         return news;
+    }
+    
+    // ========== NOUVELLES MÉTHODES CRUD SIMPLIFIÉES ==========
+    
+    /**
+     * Create a new news article (simplified version)
+     */
+    public News createNews(News news) {
+        if (news.getVisibility() == null) {
+            news.setVisibility(new News.Visibility("draft"));
+        }
+        news.setCreatedAt(LocalDateTime.now());
+        news.setUpdatedAt(LocalDateTime.now());
+        
+        return newsRepository.save(news);
+    }
+    
+    /**
+     * Update an existing news article (simplified version)
+     */
+    public News updateNews(News news) {
+        Optional<News> existingNews = newsRepository.findById(news.getId());
+        if (existingNews.isPresent()) {
+            News existing = existingNews.get();
+            
+            // Update fields
+            existing.setTitle(news.getTitle());
+            existing.setContent(news.getContent());
+            existing.setSummary(news.getSummary());
+            existing.setCategory(news.getCategory());
+            existing.setPriority(news.getPriority());
+            existing.setTargetLocation(news.getTargetLocation());
+            existing.setTargetDepartment(news.getTargetDepartment());
+            existing.setUpdatedAt(LocalDateTime.now());
+            
+            if (news.getVisibility() != null) {
+                existing.setVisibility(news.getVisibility());
+            }
+            
+            return newsRepository.save(existing);
+        } else {
+            throw new RuntimeException("News not found with ID: " + news.getId());
+        }
+    }
+    
+    
+    /**
+     * Update news status
+     */
+    public News updateNewsStatus(String id, String status) {
+        Optional<News> newsOptional = newsRepository.findById(id);
+        if (newsOptional.isPresent()) {
+            News news = newsOptional.get();
+            
+            if (news.getVisibility() == null) {
+                news.setVisibility(new News.Visibility());
+            }
+            
+            news.getVisibility().setStatus(status);
+            news.setUpdatedAt(LocalDateTime.now());
+            
+            if ("published".equals(status)) {
+                news.setPublishedAt(LocalDateTime.now());
+            }
+            
+            return newsRepository.save(news);
+        } else {
+            throw new RuntimeException("News not found with ID: " + id);
+        }
+    }
+    
+    /**
+     * Get news statistics
+     */
+    public Map<String, Object> getNewsStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        List<News> allNews = newsRepository.findAll();
+        
+        long totalNews = allNews.size();
+        long publishedNews = allNews.stream()
+            .filter(News::isPublished)
+            .count();
+        long draftNews = totalNews - publishedNews;
+        long highPriorityNews = allNews.stream()
+            .filter(news -> "high".equals(news.getPriority()))
+            .count();
+        long mediumPriorityNews = allNews.stream()
+            .filter(news -> "medium".equals(news.getPriority()))
+            .count();
+        
+        stats.put("totalNews", totalNews);
+        stats.put("publishedNews", publishedNews);
+        stats.put("draftNews", draftNews);
+        stats.put("highPriorityNews", highPriorityNews);
+        stats.put("mediumPriorityNews", mediumPriorityNews);
+        
+        return stats;
     }
 }

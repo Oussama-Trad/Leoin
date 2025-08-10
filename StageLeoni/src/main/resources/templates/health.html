@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leoni Admin - Health Check</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h4><i class="fas fa-heartbeat me-2"></i>Health Check</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                                    <h5 class="mt-2">Status</h5>
+                                    <p class="badge bg-success fs-6" th:text="${status}">OK</p>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <h5>Information Système</h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Message:</strong></td>
+                                        <td th:text="${message}">Application running</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Timestamp:</strong></td>
+                                        <td th:text="${timestamp}">2025-08-10T17:00:00</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Application:</strong></td>
+                                        <td>Leoni Admin Service</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Version:</strong></td>
+                                        <td>1.0.0-UNIFIED</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h6>Services Disponibles:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <i class="fas fa-sign-in-alt text-primary me-2"></i>
+                                            <a href="/login">Page de Connexion</a>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-chart-bar text-info me-2"></i>
+                                            <a href="/dashboard?token=demo">Dashboard (Demo)</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <i class="fas fa-cog text-secondary me-2"></i>
+                                            <a href="/api/auth/health">API Auth Health</a>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-database text-warning me-2"></i>
+                                            MongoDB: Connected
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

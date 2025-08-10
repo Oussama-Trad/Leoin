@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Auth</title>
+</head>
+<body>
+    <h1>Test d'authentification API</h1>
+    
+    <div>
+        <h3>1. Test de connexion</h3>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="login-result"></div>
+    </div>
+    
+    <br>
+    
+    <div>
+        <h3>2. Test API News (après connexion)</h3>
+        <button onclick="testNewsAPI()">Test News API</button>
+        <div id="news-result"></div>
+    </div>
+    
+    <script>
+        let token = '';
+        
+        async function testLogin() {
+            const loginResult = document.getElementById('login-result');
+            loginResult.innerHTML = 'Test en cours...';
+            
+            try {
+                const response = await fetch('http://localhost:9999/api/unified-auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'trad',
+                        password: 'trad'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    token = data.token;
+                    loginResult.innerHTML = `
+                        <div style="color: green;">
+                            ✅ Connexion réussie !<br>
+                            Token: ${token.substring(0, 50)}...<br>
+                            Utilisateur: ${data.username}<br>
+                            Rôle: ${data.role}
+                        </div>
+                    `;
+                } else {
+                    loginResult.innerHTML = `<div style="color: red;">❌ Erreur: ${data.message}</div>`;
+                }
+            } catch (error) {
+                loginResult.innerHTML = `<div style="color: red;">❌ Erreur réseau: ${error.message}</div>`;
+            }
+        }
+        
+        async function testNewsAPI() {
+            const newsResult = document.getElementById('news-result');
+            
+            if (!token) {
+                newsResult.innerHTML = '<div style="color: orange;">⚠️ Veuillez d\'abord vous connecter</div>';
+                return;
+            }
+            
+            newsResult.innerHTML = 'Test API News en cours...';
+            
+            try {
+                const response = await fetch('http://localhost:9999/api/news-management?page=0&size=10', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok && data.success) {
+                    newsResult.innerHTML = `
+                        <div style="color: green;">
+                            ✅ API News fonctionne !<br>
+                            Nombre d'actualités: ${data.news ? data.news.length : 0}<br>
+                            Total: ${data.total || 0}
+                        </div>
+                    `;
+                } else {
+                    newsResult.innerHTML = `
+                        <div style="color: red;">
+                            ❌ Erreur API: ${response.status}<br>
+                            Message: ${data.message || 'Erreur inconnue'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                newsResult.innerHTML = `<div style="color: red;">❌ Erreur réseau: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

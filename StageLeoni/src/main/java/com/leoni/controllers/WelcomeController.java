@@ -9,17 +9,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 @Controller
 public class WelcomeController {
 
-    @GetMapping("/")
-    public String welcome(Model model) {
-        model.addAttribute("title", "Admin Service");
-        model.addAttribute("message", "Welcome to Leoni Admin Service");
-        return "welcome";
-    }
+    // Home mapping moved to WebController to avoid conflicts
 
-    @GetMapping("/login")
-    public String login() {
-        return "login";
-    }
+    // Login mapping moved to WebController to avoid conflicts
     
     @GetMapping("/admin/login")
     public String adminLogin() {
