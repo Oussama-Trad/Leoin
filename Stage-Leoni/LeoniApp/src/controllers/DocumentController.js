@@ -2,6 +2,7 @@ import DocumentService from '../services/DocumentService';
 import DocumentRequestModel from '../models/DocumentRequestModel';
 import AuthController from './AuthController';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetworkService from '../services/NetworkService';
 
 /**
  * Contrôleur pour la gestion des demandes de documents
@@ -36,22 +37,34 @@ class DocumentController {
         };
       }
 
-      // Créer la demande via le service
-      const result = await DocumentService.createDocumentRequest(
-        documentModel.toApiObject(documentData),
-        token
-      );
+      // Créer la demande via l'API unifiée
+      const response = await NetworkService.fetch('/api/documents/request', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documentType: documentData.type || documentData.documentType,
+          description: documentData.description || '',
+          urgency: documentData.urgency || 'normale'
+        })
+      });
+
+      const result = await response.json();
 
       if (result.success) {
         console.log('✅ DocumentController: Demande créée avec succès');
-        console.log('🔍 DocumentController: Résultat détaillé:', result);
+        return {
+          success: true,
+          requestId: result.requestId,
+          message: result.message
+        };
       } else {
         console.log('❌ DocumentController: Échec création -', result.message);
-        console.log('🔍 DocumentController: Résultat d\'échec détaillé:', result);
+        return result;
       }
 
-      console.log('🔍 DocumentController: Résultat final à retourner:', result);
-      return result;
     } catch (error) {
       console.error('❌ DocumentController: Erreur création demande:', error);
       return {
@@ -87,7 +100,16 @@ class DocumentController {
         };
       }
 
-      const result = await DocumentService.getUserDocuments(token);
+      // Utiliser l'API unifiée
+      const response = await NetworkService.fetch('/api/documents/user', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
 
       if (result.success && result.documents && Array.isArray(result.documents)) {
         console.log(`✅ DocumentController: ${result.documents.length} documents récupérés`);
@@ -130,6 +152,47 @@ class DocumentController {
     }
   }
 
+  /**
+   * Supprimer une demande de document
+   */
+  static async deleteDocumentRequest(requestId) {
+    try {
+      console.log('📄 DocumentController: Suppression demande', requestId);
+
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        return {
+          success: false,
+          message: 'Non connecté'
+        };
+      }
+
+      const response = await NetworkService.fetch(`/api/documents/delete/${requestId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ DocumentController: Demande supprimée avec succès');
+        return result;
+      } else {
+        console.log('❌ DocumentController: Échec suppression -', result.message);
+        return result;
+      }
+
+    } catch (error) {
+      console.error('❌ DocumentController: Erreur suppression demande:', error);
+      return {
+        success: false,
+        message: 'Erreur lors de la suppression de la demande'
+      };
+    }
+  }
   /**
    * Récupérer une demande spécifique par ID
    */

@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import DocumentController from '../controllers/DocumentController';
 
@@ -17,6 +18,7 @@ const DocumentsScreen = ({ navigation }) => {
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
 
 
@@ -67,6 +69,40 @@ const DocumentsScreen = ({ navigation }) => {
     }
   };
 
+  const handleDeleteDocument = async (documentId, documentType) => {
+    Alert.alert(
+      'Supprimer le document',
+      `Êtes-vous sûr de vouloir supprimer cette demande de "${documentType}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Supprimer', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              setDeletingId(documentId);
+              console.log('🗑️ Suppression document:', documentId);
+              
+              const result = await DocumentController.deleteDocumentRequest(documentId);
+              
+              if (result.success) {
+                Alert.alert('Succès', 'Document supprimé avec succès');
+                // Recharger la liste
+                loadDocuments();
+              } else {
+                Alert.alert('Erreur', result.message || 'Impossible de supprimer le document');
+              }
+            } catch (error) {
+              console.error('Erreur suppression document:', error);
+              Alert.alert('Erreur', 'Erreur lors de la suppression');
+            } finally {
+              setDeletingId(null);
+            }
+          }
+        }
+      ]
+    );
+  };
   const onRefresh = () => {
     setRefreshing(true);
     loadDocuments();
@@ -116,6 +152,24 @@ const DocumentsScreen = ({ navigation }) => {
                 ]}>
                   <Text style={[styles.statusText, {color: '#000'}]}>{(doc.status?.current || 'en attente').toUpperCase()}</Text>
                 </View>
+                
+                {/* Bouton supprimer - seulement si pas accepté */}
+                {doc.status?.current !== 'accepté' && (
+                  <TouchableOpacity
+                    style={[
+                      styles.deleteButton,
+                      deletingId === (doc.id || doc._id) && styles.deleteButtonDisabled
+                    ]}
+                    onPress={() => handleDeleteDocument(doc.id || doc._id, doc.type || doc.documentType)}
+                    disabled={deletingId === (doc.id || doc._id)}
+                  >
+                    {deletingId === (doc.id || doc._id) ? (
+                      <ActivityIndicator size="small" color="#dc3545" />
+                    ) : (
+                      <Ionicons name="trash-outline" size={20} color="#dc3545" />
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -128,6 +182,12 @@ const DocumentsScreen = ({ navigation }) => {
             <Text style={styles.documentDate}>
               Envoyé le: {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : '---'}
             </Text>
+            
+            {doc.updatedAt && doc.updatedAt !== doc.createdAt && (
+              <Text style={styles.documentDate}>
+                Mis à jour le: {new Date(doc.updatedAt).toLocaleDateString()}
+              </Text>
+            )}
           </View>
         ))}
       </ScrollView>
@@ -214,6 +274,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     backgroundColor: '#fff',
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+  },
+  deleteButtonDisabled: {
+    opacity: 0.5,
   },
   inProgressStatus: {
     backgroundColor: '#FFC107',

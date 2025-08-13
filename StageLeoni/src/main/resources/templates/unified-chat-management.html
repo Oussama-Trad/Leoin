@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Conversations - LEONI Admin</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --leoni-blue: #1e3c72;
+            --leoni-light-blue: #2a5298;
+            --leoni-accent: #667eea;
+        }
+        
+        .chat-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #dee2e6;
+            cursor: pointer;
+        }
+        
+        .chat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .chat-card.status-open {
+            border-left-color: #28a745;
+        }
+        
+        .chat-card.status-in_progress {
+            border-left-color: #ffc107;
+        }
+        
+        .chat-card.status-closed {
+            border-left-color: #6c757d;
+        }
+        
+        .unread-indicator {
+            width: 12px;
+            height: 12px;
+            background: #dc3545;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .priority-high { color: #dc3545; }
+        .priority-normal { color: #0d6efd; }
+        .priority-low { color: #198754; }
+        
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin-bottom: 12px;
+        }
+        
+        .message-user {
+            background: #e3f2fd;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message-admin {
+            background: #f3e5f5;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, var(--leoni-blue), var(--leoni-accent));
+            color: white;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1 class="h3">
+                        <i class="fas fa-comments text-primary me-2"></i>
+                        Gestion des Conversations
+                    </h1>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" onclick="refreshData()">
+                            <i class="fas fa-sync-alt me-1"></i>Actualiser
+                        </button>
+                        <button class="btn btn-primary" onclick="showFilters()">
+                            <i class="fas fa-filter me-1"></i>Filtres
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="row mb-4" id="statisticsRow">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-comments fa-2x mb-2"></i>
+                        <h4 id="totalConversations">0</h4>
+                        <p class="mb-0">Total Conversations</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <h4 id="openConversations">0</h4>
+                        <p class="mb-0">Ouvertes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <h4 id="inProgressConversations">0</h4>
+                        <p class="mb-0">En Cours</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                        <h4 id="unreadConversations">0</h4>
+                        <p class="mb-0">Non Lues</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="row mb-3" id="filtersRow" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Statut</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="open">Ouvert</option>
+                                    <option value="in_progress">En cours</option>
+                                    <option value="closed">Fermé</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Recherche</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Sujet, utilisateur...">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-primary" onclick="applyFilters()">
+                                    <i class="fas fa-search me-1"></i>Rechercher
+                                </button>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                                    <i class="fas fa-times me-1"></i>Effacer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Conversations List -->
+        <div class="row" id="conversationsList">
+            <!-- Les conversations seront chargées ici via JavaScript -->
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Navigation des conversations" id="paginationNav" style="display: none;">
+            <ul class="pagination justify-content-center" id="paginationList">
+                <!-- Pagination sera générée via JavaScript -->
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Modal de détail de conversation -->
+    <div class="modal fade" id="chatDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="chatModalTitle">Détail de la conversation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Messages -->
+                            <div class="chat-container" id="messagesContainer">
+                                <!-- Messages seront chargés ici -->
+                            </div>
+                            
+                            <!-- Zone de réponse -->
+                            <div class="mt-3" id="replySection">
+                                <div class="input-group">
+                                    <textarea class="form-control" id="replyMessage" rows="2" placeholder="Tapez votre réponse..."></textarea>
+                                    <button class="btn btn-primary" onclick="sendReply()">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <!-- Informations de la conversation -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Informations</h6>
+                                </div>
+                                <div class="card-body" id="chatInfo">
+                                    <!-- Infos seront chargées ici -->
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Actions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-warning btn-sm" onclick="updateStatus('in_progress')">
+                                            <i class="fas fa-play me-1"></i>Prendre en charge
+                                        </button>
+                                        <button class="btn btn-success btn-sm" onclick="updateStatus('closed')">
+                                            <i class="fas fa-check me-1"></i>Fermer
+                                        </button>
+                                        <button class="btn btn-secondary btn-sm" onclick="updateStatus('open')">
+                                            <i class="fas fa-undo me-1"></i>Rouvrir
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Variables globales
+        let currentPage = 0;
+        let totalPages = 0;
+        let currentChatId = null;
+        let authToken = localStorage.getItem('token');
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!authToken) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            loadStatistics();
+            loadConversations();
+            
+            // Auto-refresh toutes les 30 secondes
+            setInterval(loadConversations, 30000);
+        });
+        
+        // Charger les statistiques
+        async function loadStatistics() {
+            try {
+                const response = await fetch('/api/sync/statistics', {
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.chatStatistics) {
+                        updateStatisticsDisplay(data.chatStatistics);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur chargement statistiques:', error);
+            }
+        }
+        
+        // Mettre à jour l'affichage des statistiques
+        function updateStatisticsDisplay(stats) {
+            document.getElementById('totalConversations').textContent = stats.totalConversations || 0;
+            document.getElementById('openConversations').textContent = stats.openConversations || 0;
+            document.getElementById('inProgressConversations').textContent = stats.inProgressConversations || 0;
+            document.getElementById('unreadConversations').textContent = stats.unreadConversations || 0;
+        }
+        
+        // Charger les conversations
+        async function loadConversations(page = 0) {
+            try {
+                const statusFilter = document.getElementById('statusFilter')?.value || '';
+                let url = `/api/sync/chats?page=${page}&size=12`;
+                
+                if (statusFilter) {
+                    url += `&status=${statusFilter}`;
+                }
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        displayConversations(data.conversations);
+                        updatePagination(data.currentPage, data.totalPages);
+                        currentPage = data.currentPage;
+                        totalPages = data.totalPages;
+                    }
+                } else {
+                    showError('Erreur lors du chargement des conversations');
+                }
+            } catch (error) {
+                console.error('Erreur chargement conversations:', error);
+                showError('Erreur de connexion');
+            }
+        }
+        
+        // Afficher les conversations
+        function displayConversations(conversations) {
+            const container = document.getElementById('conversationsList');
+            
+            if (!conversations || conversations.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="text-center py-5">
+                            <i class="fas fa-comments fa-4x text-muted mb-3"></i>
+                            <h4 class="text-muted">Aucune conversation trouvée</h4>
+                            <p class="text-muted">Il n'y a pas de conversations correspondant aux critères.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            conversations.forEach(chat => {
+                const statusClass = `status-${chat.status}`;
+                const priorityClass = `priority-${chat.priority || 'normal'}`;
+                const unreadIndicator = chat.hasUnreadMessages ? '<div class="unread-indicator"></div>' : '';
+                
+                html += `
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card chat-card h-100 ${statusClass}" onclick="openChatDetail('${chat.id}')">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">${chat.subject || 'Sans sujet'}</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-${getStatusColor(chat.status)}">${getStatusText(chat.status)}</span>
+                                    ${unreadIndicator}
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-8">
+                                        <p class="card-text small">
+                                            <strong>Employé:</strong> ${chat.userName || 'N/A'}<br>
+                                            <strong>Email:</strong> ${chat.userEmail || 'N/A'}<br>
+                                            <strong>Département:</strong> ${chat.targetDepartment || 'N/A'}<br>
+                                            <strong>Location:</strong> ${chat.targetLocation || 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div class="col-4 text-end">
+                                        <i class="fas fa-flag ${priorityClass}" title="Priorité ${chat.priority || 'normale'}"></i>
+                                        <br><br>
+                                        <small class="text-muted">
+                                            <i class="fas fa-envelope me-1"></i>${chat.messageCount || 0}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    ${formatDate(chat.lastActivityAt || chat.createdAt)}
+                                </small>
+                                ${chat.assignedAdminName ? `<br><small class="text-muted"><i class="fas fa-user me-1"></i>${chat.assignedAdminName}</small>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // Ouvrir le détail d'une conversation
+        async function openChatDetail(chatId) {
+            currentChatId = chatId;
+            
+            try {
+                const response = await fetch(`/api/sync/chats/${chatId}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        displayChatDetail(data.chat, data.messages);
+                        const modal = new bootstrap.Modal(document.getElementById('chatDetailModal'));
+                        modal.show();
+                    }
+                } else {
+                    showError('Erreur lors du chargement de la conversation');
+                }
+            } catch (error) {
+                console.error('Erreur chargement détail chat:', error);
+                showError('Erreur de connexion');
+            }
+        }
+        
+        // Afficher le détail d'une conversation
+        function displayChatDetail(chat, messages) {
+            // Titre du modal
+            document.getElementById('chatModalTitle').textContent = chat.subject || 'Conversation';
+            
+            // Informations de la conversation
+            document.getElementById('chatInfo').innerHTML = `
+                <p><strong>Statut:</strong> <span class="badge bg-${getStatusColor(chat.status)}">${getStatusText(chat.status)}</span></p>
+                <p><strong>Priorité:</strong> <span class="${getPriorityClass(chat.priority)}">${chat.priority || 'normale'}</span></p>
+                <p><strong>Employé:</strong> ${chat.userName || 'N/A'}</p>
+                <p><strong>Email:</strong> ${chat.userEmail || 'N/A'}</p>
+                <p><strong>Département:</strong> ${chat.targetDepartment || 'N/A'}</p>
+                <p><strong>Location:</strong> ${chat.targetLocation || 'N/A'}</p>
+                <p><strong>Créée le:</strong> ${formatDate(chat.createdAt)}</p>
+                <p><strong>Messages:</strong> ${chat.messageCount || 0}</p>
+                ${chat.assignedAdminName ? `<p><strong>Admin assigné:</strong> ${chat.assignedAdminName}</p>` : ''}
+            `;
+            
+            // Messages
+            displayMessages(messages);
+            
+            // Activer/désactiver la zone de réponse selon le statut
+            const replySection = document.getElementById('replySection');
+            if (chat.status === 'closed') {
+                replySection.style.display = 'none';
+            } else {
+                replySection.style.display = 'block';
+            }
+        }
+        
+        // Afficher les messages
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            
+            if (!messages || messages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                        <p>Aucun message dans cette conversation</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            messages.forEach(message => {
+                const isUser = message.senderType === 'user';
+                const bubbleClass = isUser ? 'message-user' : 'message-admin';
+                
+                html += `
+                    <div class="d-flex ${isUser ? 'justify-content-end' : 'justify-content-start'}">
+                        <div class="message-bubble ${bubbleClass}">
+                            <div class="fw-bold small mb-1">${message.senderName}</div>
+                            <div>${message.message}</div>
+                            <div class="small text-muted mt-1">${formatDateTime(message.createdAt)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Envoyer une réponse
+        async function sendReply() {
+            const messageInput = document.getElementById('replyMessage');
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                showError('Veuillez saisir un message');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/sync/chats/${currentChatId}/reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        messageInput.value = '';
+                        showSuccess('Réponse envoyée avec succès');
+                        // Recharger le détail de la conversation
+                        setTimeout(() => openChatDetail(currentChatId), 1000);
+                    }
+                } else {
+                    showError('Erreur lors de l\'envoi de la réponse');
+                }
+            } catch (error) {
+                console.error('Erreur envoi réponse:', error);
+                showError('Erreur de connexion');
+            }
+        }
+        
+        // Mettre à jour le statut d'une conversation
+        async function updateStatus(newStatus) {
+            if (!confirm(`Êtes-vous sûr de vouloir changer le statut vers "${getStatusText(newStatus)}" ?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/sync/chats/${currentChatId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        showSuccess('Statut mis à jour avec succès');
+                        // Fermer le modal et recharger
+                        bootstrap.Modal.getInstance(document.getElementById('chatDetailModal')).hide();
+                        setTimeout(() => {
+                            loadConversations(currentPage);
+                            loadStatistics();
+                        }, 1000);
+                    }
+                } else {
+                    showError('Erreur lors de la mise à jour du statut');
+                }
+            } catch (error) {
+                console.error('Erreur mise à jour statut:', error);
+                showError('Erreur de connexion');
+            }
+        }
+        
+        // Fonctions utilitaires
+        function getStatusColor(status) {
+            const colors = {
+                'open': 'success',
+                'in_progress': 'warning',
+                'closed': 'secondary'
+            };
+            return colors[status] || 'primary';
+        }
+        
+        function getStatusText(status) {
+            const texts = {
+                'open': 'Ouvert',
+                'in_progress': 'En cours',
+                'closed': 'Fermé'
+            };
+            return texts[status] || status;
+        }
+        
+        function getPriorityClass(priority) {
+            return `priority-${priority || 'normal'}`;
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR');
+        }
+        
+        function formatDateTime(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('fr-FR');
+        }
+        
+        function showFilters() {
+            const filtersRow = document.getElementById('filtersRow');
+            filtersRow.style.display = filtersRow.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function applyFilters() {
+            loadConversations(0);
+        }
+        
+        function clearFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            loadConversations(0);
+        }
+        
+        function refreshData() {
+            loadStatistics();
+            loadConversations(currentPage);
+        }
+        
+        function updatePagination(current, total) {
+            const nav = document.getElementById('paginationNav');
+            const list = document.getElementById('paginationList');
+            
+            if (total <= 1) {
+                nav.style.display = 'none';
+                return;
+            }
+            
+            nav.style.display = 'block';
+            let html = '';
+            
+            // Bouton précédent
+            html += `
+                <li class="page-item ${current === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="loadConversations(${current - 1})">Précédent</a>
+                </li>
+            `;
+            
+            // Pages
+            for (let i = 0; i < total; i++) {
+                html += `
+                    <li class="page-item ${i === current ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="loadConversations(${i})">${i + 1}</a>
+                    </li>
+                `;
+            }
+            
+            // Bouton suivant
+            html += `
+                <li class="page-item ${current === total - 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="loadConversations(${current + 1})">Suivant</a>
+                </li>
+            `;
+            
+            list.innerHTML = html;
+        }
+        
+        function showSuccess(message) {
+            showAlert(message, 'success');
+        }
+        
+        function showError(message) {
+            showAlert(message, 'danger');
+        }
+        
+        function showAlert(message, type) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show position-fixed" 
+                     style="top: 20px; right: 20px; z-index: 9999;">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-dismiss après 5 secondes
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    if (alert.textContent.includes(message)) {
+                        alert.remove();
+                    }
+                });
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

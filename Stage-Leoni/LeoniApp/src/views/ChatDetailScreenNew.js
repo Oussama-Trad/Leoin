@@ -8,9 +8,12 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
   Dimensions 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ChatController from '../controllers/ChatController';
 
 const { width } = Dimensions.get('window');
 
@@ -22,74 +25,139 @@ export default function ChatDetailScreen({ route, navigation }) {
   
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [chatData, setChatData] = useState(chat);
 
   // Add null check for chat object and provide default values
   if (!chat) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Chat not found</Text>
+        <Text style={styles.errorText}>Conversation non trouvée</Text>
       </View>
     );
   }
 
   // Default values for missing chat properties
-  const chatColor = chat.color || '#002857'; // Default blue color
-  const chatIcon = chat.icon || 'chatbubble-outline'; // Default chat icon
-  const chatName = chat.name || chat.subject || chat.targetDepartment || 'Conversation';
+  const chatColor = (chatData && chatData.color) || '#002857';
+  const chatIcon = (chatData && chatData.icon) || 'chatbubble-outline';
+  const chatName = (chatData && (chatData.name || chatData.subject || chatData.targetDepartment)) || 'Conversation';
 
   useEffect(() => {
-    // Simuler des messages
-    const mockMessages = [
-      {
-        id: '1',
-        text: 'Bonjour ! Comment puis-je vous aider aujourd\'hui ?',
-        sender: 'service',
-        timestamp: new Date(Date.now() - 3600000),
-      },
-      {
-        id: '2',
-        text: 'Bonjour, j\'ai une question concernant ma demande de congé',
-        sender: 'user',
-        timestamp: new Date(Date.now() - 3500000),
-      },
-      {
-        id: '3',
-        text: 'Je vais vérifier le statut de votre demande. Un moment s\'il vous plaît.',
-        sender: 'service',
-        timestamp: new Date(Date.now() - 3400000),
-      },
-    ];
-    setMessages(mockMessages);
+    loadMessages();
+    
+    // Auto-refresh des messages toutes les 10 secondes
+    const interval = setInterval(loadMessages, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
+  const loadMessages = async () => {
+    try {
+      const response = await ChatController.getConversationMessages(chatId);
+      
+      if (response.success) {
+        setMessages(response.messages || []);
+        
+        // Marquer la conversation comme lue
+        ChatController.markConversationAsRead(chatId);
+      } else {
+        console.error('Erreur chargement messages:', response.message);
+        if (!loading) {
+          Alert.alert('Erreur', response.message || 'Impossible de charger les messages');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur chargement messages:', error);
+      if (!loading) {
+        Alert.alert('Erreur', 'Problème de connexion');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendMessage = () => {
-    if (newMessage.trim()) {
-      const message = {
-        id: Date.now().toString(),
-        text: newMessage,
-        sender: 'user',
-        timestamp: new Date(),
-      };
-      setMessages([...messages, message]);
+    if (!newMessage.trim() || sending) return;
+
+    const messageText = newMessage.trim();
+    setSending(true);
+    setNewMessage('');
+
+    // Ajouter le message localement pour l'affichage immédiat
+    const tempMessage = {
+      _id: `temp_${Date.now()}`,
+      content: messageText,
+      message: messageText,
+      senderName: 'Vous',
+      senderType: 'user',
+      isCurrentUser: true,
+      createdAt: new Date().toISOString(),
+      isTemp: true
+    };
+    
+    setMessages(prev => [...prev, tempMessage]);
+
+    // Envoyer le message
+    ChatController.sendMessage(chatId, messageText)
+      .then(response => {
+        if (response.success) {
+          // Remplacer le message temporaire par le vrai
+          setMessages(prev => 
+            prev.map(msg => 
+              msg._id === tempMessage._id ? {
+                ...tempMessage,
+                _id: response.messageId,
+                isTemp: false
+              } : msg
+            )
+          );
+        } else {
+          // Supprimer le message temporaire en cas d'erreur
+          setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
+          Alert.alert('Erreur', response.message || 'Impossible d\'envoyer le message');
+        }
+      })
+      .catch(error => {
+        console.error('Erreur envoi message:', error);
+        setMessages(prev => prev.filter(msg => msg._id !== tempMessage._id));
+        Alert.alert('Erreur', 'Problème de connexion');
+      })
+      .finally(() => {
+        setSending(false);
+      });
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={chatColor} />
+        <Text style={styles.loadingText}>Chargement de la conversation...</Text>
+      </View>
+    );
+  }
       setNewMessage('');
     }
   };
 
   const renderMessage = ({ item }) => {
-    const isUser = item.sender === 'user';
+    const isUser = item.isCurrentUser || item.senderType === 'user';
     
     return (
       <View style={[styles.messageContainer, isUser ? styles.userMessage : styles.serviceMessage]}>
         <View style={[
           styles.messageBubble, 
-          { backgroundColor: isUser ? '#002857' : '#ffffff' }
+          { 
+            backgroundColor: isUser ? chatColor : '#ffffff',
+            opacity: item.isTemp ? 0.7 : 1
+          }
         ]}>
           <Text style={[styles.messageText, { color: isUser ? '#ffffff' : '#2D3748' }]}>
-            {item.text}
+            {item.content || item.message}
           </Text>
         </View>
         <Text style={styles.timestamp}>
-          {item.timestamp.toLocaleTimeString('fr-FR', { 
+          {new Date(item.createdAt).toLocaleTimeString('fr-FR', { 
             hour: '2-digit', 
             minute: '2-digit' 
           })}
@@ -117,7 +185,9 @@ export default function ChatDetailScreen({ route, navigation }) {
           </View>
           <View>
             <Text style={styles.headerTitle}>{chatName}</Text>
-            <Text style={styles.headerSubtitle}>En ligne</Text>
+            <Text style={styles.headerSubtitle}>
+              {chatData && chatData.status ? getStatusText(chatData.status) : 'En ligne'}
+            </Text>
           </View>
         </View>
       </View>
@@ -125,10 +195,20 @@ export default function ChatDetailScreen({ route, navigation }) {
       <FlatList
         data={messages}
         renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id || item.id}
         style={styles.messagesList}
         contentContainerStyle={styles.messagesContainer}
         showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => {
+          // Auto-scroll vers le bas
+        }}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              Conversation démarrée. Écrivez votre premier message !
+            </Text>
+          </View>
+        }
       />
 
       <View style={styles.inputContainer}>
@@ -140,18 +220,33 @@ export default function ChatDetailScreen({ route, navigation }) {
             placeholder="Tapez votre message..."
             placeholderTextColor="#718096"
             multiline
+            maxLength={1000}
           />
           <TouchableOpacity 
             style={[styles.sendButton, { backgroundColor: chatColor }]}
             onPress={sendMessage}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || sending}
           >
-            <Ionicons name="send" size={20} color="#ffffff" />
+            {sending ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Ionicons name="send" size={20} color="#ffffff" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+// Fonction utilitaire pour le statut
+function getStatusText(status) {
+  const statusTexts = {
+    'open': 'Ouvert',
+    'in_progress': 'En cours',
+    'closed': 'Fermé'
+  };
+  return statusTexts[status] || 'En ligne';
 }
 
 const styles = StyleSheet.create({
@@ -284,5 +379,26 @@ const styles = StyleSheet.create({
     color: '#e53e3e',
     textAlign: 'center',
     marginTop: 50,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

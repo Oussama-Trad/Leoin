@@ -303,6 +303,10 @@
                     <i class="fas fa-comments"></i>
                     <span>Conversations</span>
                 </a></li>
+                <li><a href="/admin/chat" class="nav-link">
+                    <i class="fas fa-comments-dollar"></i>
+                    <span>Interface Chat Complète</span>
+                </a></li>
                 <li th:if="${isSuperAdmin}"><a href="#admin-management" class="nav-link" data-section="admin-management">
                     <i class="fas fa-user-cog"></i>
                     <span>Gestion Admins</span>
@@ -404,6 +408,46 @@
                 </div>
             </div>
             
+            <!-- Section Conversations dans le dashboard -->
+            <div class="content-card mb-4">
+                <div class="card-header-custom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>
+                        Conversations Récentes
+                    </h5>
+                </div>
+                <div class="card-body-custom">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span>Conversations ouvertes</span>
+                                <span class="badge bg-success" id="openChatsCount">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span>En cours de traitement</span>
+                                <span class="badge bg-warning" id="inProgressChatsCount">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span>Messages non lus</span>
+                                <span class="badge bg-danger" id="unreadChatsCount">0</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-grid gap-2">
+                                <a th:href="@{/admin/chat(token=${token})}" class="btn btn-primary">
+                                    <i class="fas fa-comments me-2"></i>
+                                    Interface Chat Complète
+                                </a>
+                                <button class="btn btn-outline-primary" onclick="loadChatPreview()">
+                                    <i class="fas fa-eye me-2"></i>
+                                    Aperçu Conversations
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Recent Activity -->
             <div class="content-card">
                 <div class="card-header-custom">
@@ -449,12 +493,18 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Variables globales
+        const authToken = '[[${token}]]';
+        
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Dashboard initialized');
             
             // Setup navigation
             setupNavigation();
+            
+            // Charger les statistiques de chat
+            loadChatStatistics();
             
             // Auto-refresh stats every 5 minutes
             setInterval(refreshStats, 5 * 60 * 1000);
@@ -486,6 +536,12 @@
             if (section === 'dashboard') {
                 document.getElementById('dashboard-section').style.display = 'block';
                 document.getElementById('dynamic-content').style.display = 'none';
+                return;
+            }
+            
+            // Redirection vers l'interface chat complète
+            if (section === 'chats') {
+                window.location.href = `/admin/chat?token=${encodeURIComponent(authToken)}`;
                 return;
             }
             
@@ -541,8 +597,7 @@
         
         // Load actual section content using our API endpoints
         async function loadSectionContent(section) {
-            const token = '[[${token}]]';
-            if (!token) {
+            if (!authToken) {
                 document.getElementById('dynamic-content').innerHTML = `
                     <div class="error-message">
                         <i class="fas fa-exclamation-triangle me-2"></i>
@@ -561,18 +616,14 @@
                         apiEndpoint = '/dashboard/api/employees';
                         dataKey = 'employees';
                         break;
-                    case 'chats':
-                        apiEndpoint = '/dashboard/api/chats';
-                        dataKey = 'chats';
-                        break;
                     case 'news':
                         apiEndpoint = '/api/news-management';
                         dataKey = 'news';
                         break;
                     case 'documents':
-                        // Document management would go here when implemented
-                        showComingSoon(section);
-                        return;
+                        apiEndpoint = '/api/sync/documents';
+                        dataKey = 'requests';
+                        break;
                     case 'admin-management':
                         // Admin management would go here when implemented
                         showComingSoon(section);
@@ -585,7 +636,7 @@
                 // Fetch data from API
                 const response = await fetch(apiEndpoint + '?page=0&size=10', {
                     headers: {
-                        'Authorization': 'Bearer ' + token,
+                        'Authorization': 'Bearer ' + authToken,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -786,12 +837,11 @@
         // Refresh dashboard stats
         async function refreshStats() {
             try {
-                const token = '[[${token}]]';
-                if (!token) return;
+                if (!authToken) return;
                 
                 const response = await fetch('/dashboard/api/stats', {
                     headers: {
-                        'Authorization': 'Bearer ' + token
+                        'Authorization': 'Bearer ' + authToken
                     }
                 });
                 
@@ -804,6 +854,109 @@
             } catch (error) {
                 console.error('Error refreshing stats:', error);
             }
+        }
+        
+        // Charger les statistiques de chat
+        async function loadChatStatistics() {
+            try {
+                const response = await fetch('/api/sync/statistics', {
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.chatStatistics) {
+                        updateChatStatistics(data.chatStatistics);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur chargement statistiques chat:', error);
+            }
+        }
+        
+        // Mettre à jour les statistiques de chat
+        function updateChatStatistics(chatStats) {
+            const elements = {
+                'openChatsCount': chatStats.openConversations || 0,
+                'inProgressChatsCount': chatStats.inProgressConversations || 0,
+                'unreadChatsCount': chatStats.unreadConversations || 0
+            };
+            
+            Object.entries(elements).forEach(([elementId, value]) => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = value;
+                }
+            });
+        }
+        
+        // Charger l'aperçu des conversations
+        async function loadChatPreview() {
+            try {
+                const response = await fetch('/api/sync/chats?page=0&size=5', {
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        displayChatPreview(data.conversations);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur chargement aperçu chat:', error);
+            }
+        }
+        
+        // Afficher l'aperçu des conversations
+        function displayChatPreview(conversations) {
+            if (!conversations || conversations.length === 0) {
+                showAlert('Aucune conversation trouvée', 'info');
+                return;
+            }
+            
+            let html = '<div class="list-group">';
+            conversations.forEach(chat => {
+                html += `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${chat.subject || 'Sans sujet'}</h6>
+                                <small>${chat.userName || 'Utilisateur'} - ${chat.targetDepartment || 'N/A'}</small>
+                            </div>
+                            <span class="badge bg-${getStatusColor(chat.status)}">${getStatusText(chat.status)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            // Afficher dans un modal ou une section
+            showAlert('Aperçu des conversations chargé', 'success');
+        }
+        
+        function getStatusColor(status) {
+            const colors = {
+                'open': 'success',
+                'in_progress': 'warning',
+                'closed': 'secondary'
+            };
+            return colors[status] || 'primary';
+        }
+        
+        function getStatusText(status) {
+            const texts = {
+                'open': 'Ouvert',
+                'in_progress': 'En cours',
+                'closed': 'Fermé'
+            };
+            return texts[status] || status;
         }
         
         // Update stats display
@@ -835,7 +988,7 @@
         // Logout function
         function logout() {
             if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-                const token = '[[${token}]]';
+                const token = authToken;
                 
                 fetch('/api/auth/logout', {
                     method: 'POST',
@@ -863,6 +1016,30 @@
                 sidebar.classList.remove('show');
             }
         });
+        
+        // Fonction utilitaire pour afficher des alertes
+        function showAlert(message, type = 'info') {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show position-fixed" 
+                     style="top: 20px; right: 20px; z-index: 9999; max-width: 400px;">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-dismiss après 5 secondes
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    if (alert.textContent.includes(message)) {
+                        alert.remove();
+                    }
+                });
+            }, 5000);
+        }
     </script>
 </body>
 </html>

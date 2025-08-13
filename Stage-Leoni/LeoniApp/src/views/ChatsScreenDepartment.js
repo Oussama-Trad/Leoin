@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { chatAPI } from '../controllers/apiService';
+import ChatController from '../controllers/ChatController';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ChatsScreenDepartment = ({ navigation }) => {
@@ -53,7 +53,7 @@ const ChatsScreenDepartment = ({ navigation }) => {
   const loadChats = async () => {
     try {
       setLoading(true);
-      const response = await chatAPI.getChats();
+      const response = await ChatController.getUserConversations();
       if (response.success) {
         setChats(response.data || []);
       } else {
@@ -70,12 +70,12 @@ const ChatsScreenDepartment = ({ navigation }) => {
   const loadDepartments = async () => {
     try {
       console.log('📋 Chargement des départements depuis l\'API...');
-      const response = await chatAPI.getDepartments();
+      const response = await ChatController.getAvailableDepartments();
       console.log('📋 Réponse API départements complète:', JSON.stringify(response, null, 2));
       
       if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
         console.log('✅ Départements chargés depuis l\'API:', response.data.length, 'départements');
-        setDepartments(response.data);
+        setDepartments(response.departments);
       } else {
         console.log('⚠️ API départements invalide ou vide, utilisation du fallback');
         console.log('Réponse reçue:', response);
@@ -203,12 +203,12 @@ const ChatsScreenDepartment = ({ navigation }) => {
       }
 
       console.log('🚀 Création du chat avec le département:', selectedDepartment.name);
-      // Création de la conversation avec les bons paramètres
-      const response = await chatAPI.createChatWithDepartment(
+      // Création de la conversation via le contrôleur unifié
+      const response = await ChatController.createConversationWithDepartment(
         selectedDepartment.name,  // Le nom du département sera passé comme "department"
         selectedDepartment.location || userProfile.location,
         chatSubject.trim(),
-        'normal'
+        chatSubject.trim()  // Message initial
       );
 
       if (response.success) {
@@ -223,10 +223,10 @@ const ChatsScreenDepartment = ({ navigation }) => {
         await loadChats();
         
         // Naviguer vers le nouveau chat si possible
-        if (response.data && response.data._id) {
+        if (response.conversationId) {
           navigation.navigate('ChatDetail', { 
-            chatId: response.data._id,
-            chatData: response.data 
+            chatId: response.conversationId,
+            chatData: { _id: response.conversationId, subject: chatSubject.trim() }
           });
         }
       } else {
